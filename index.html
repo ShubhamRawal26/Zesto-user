@@ -175,7 +175,7 @@ label{font-size:13px;color:#111;margin:10px 0 6px;display:block}
 .del-stat .num{font-size:24px;font-weight:700;font-family:Poppins;color:var(--accent)}
 .del-stat .lbl{font-size:11px;color:var(--muted);margin-top:2px}
 
-/* City Modal Overlay */
+/* City Modal Overlay added for Zesto Requirement #2 */
 #city-modal-overlay{
   position:fixed;inset:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(5px);
   z-index:9999;display:none;flex-direction:column;align-items:center;justify-content:center;padding:20px;
@@ -187,7 +187,7 @@ label{font-size:13px;color:#111;margin:10px 0 6px;display:block}
 </head>
 <body>
 
-<!-- City Selection Prompt (Appears on First Load) -->
+<!-- City Selection Prompt -->
 <div id="city-modal-overlay">
   <div class="city-modal-box">
     <div style="font-size:48px; color:var(--accent); margin-bottom:12px;"><i class="fa-solid fa-location-dot"></i></div>
@@ -207,7 +207,7 @@ label{font-size:13px;color:#111;margin:10px 0 6px;display:block}
     <header class="topbar">
       <div class="topbar-inner">
         <button id="back-btn" class="icon-round" aria-label="Back" style="display:none"><i class="fa-solid fa-arrow-left"></i></button>
-        <img id="app-logo" class="topbar-logo" src="" alt="Zesto" style="display:none">
+        <img id="app-logo" class="topbar-logo" src="" alt="" style="display:none">
         <h1 id="page-title" class="title">Zesto</h1>
       </div>
     </header>
@@ -246,7 +246,6 @@ const escapeHtml=(s="")=>s.replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&
 const toast=msg=>{const t=$("#toast");t.textContent=msg;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),1400)};
 const routeTo=hash=>{location.hash=hash};
 
-// --- GLOBALS & FIREBASE ---
 let PROFILE=readLocal("sf_profile",{name:"",email:"",phone:"",address:"",pincode:"",city:"",state:"",district:"",landmark:"",avatar:"",isComplete:false,favorites:[]});
 const saveProfile=()=>writeLocal("sf_profile",PROFILE);
 const hasCompleteProfile=()=>!!(PROFILE.name&&PROFILE.email&&PROFILE.phone&&PROFILE.address&&PROFILE.pincode);
@@ -255,9 +254,9 @@ let PRODUCTS=[];
 let CART=readLocal("sf_cart",[]);
 const saveCart=()=>writeLocal("sf_cart",CART);
 
-// --- CITY PRICING & SELECTION LOGIC ---
+// --- City & Pricing Logic Variables ---
 let USER_CITY = localStorage.getItem('zesto_city');
-let ALLOWED_CITIES = ['Jaipur', 'Delhi', 'Mumbai']; // Fallback cities
+let ALLOWED_CITIES = ['Jaipur', 'Delhi', 'Mumbai'];
 
 const getPrice = (p) => {
     if(!p) return 0;
@@ -284,6 +283,7 @@ let dataFetched={products:false,orders:false,ratings:false,config:false};
 
 function showLoader(){$("#view").innerHTML=`<div class="loader"><div class="dot"></div><div class="dot"></div><div class="dot"></div><div style="color:var(--accent);font-weight:600">Loading...</div></div>`}
 
+// --- Modified Check & Render to fix the blank screen ---
 function checkCitySelection() {
     if (!USER_CITY) {
         $("#city-modal-overlay").style.display = "flex";
@@ -308,7 +308,8 @@ window.selectCity = (c) => {
 };
 
 function checkAndRender(){
-    if(dataFetched.products&&dataFetched.orders&&dataFetched.ratings&&dataFetched.config){
+    // Only require products and config to do an initial render, solving the blank screen bug if orders/ratings are empty
+    if(dataFetched.products && dataFetched.config){
         if(checkCitySelection()){
             render();
         }
@@ -583,14 +584,14 @@ function CheckoutView(){
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div><label>State</label><input id="ch-state"></div><div><label>District</label><input id="ch-district"></div></div>
         <label>Landmark</label><input id="ch-landmark">
         <h3 style="margin:16px 0 8px;font-family:Poppins;color:var(--accentDark)"><i class="fa-solid fa-location-dot"></i> Delivery Location</h3>
-        <p class="muted" style="font-size:12px;margin:0 0 6px">Click/tap map or "Use GPS" to set your delivery point.</p>
+        <p class="muted" style="font-size:12px;margin:0 0 6px">Tap/click on the map or use GPS to set your exact delivery location</p>
         <div id="checkout-map" class="map-container"></div>
         <input id="ch-lat" type="hidden"><input id="ch-lng" type="hidden">
-        <div id="ch-loc-text" class="muted" style="font-size:12px;margin-top:6px">Location not set.</div>
+        <div id="ch-loc-text" class="muted" style="font-size:12px;margin-top:6px"></div>
         <button type="button" class="btn btn-outline" style="margin-top:8px;font-size:13px" id="ch-use-gps"><i class="fa-solid fa-crosshairs"></i> Use My Current Location</button>
       </div>
       <div class="card pad" style="margin-top:16px">
-        <h3 style="margin:0 0 12px;font-family:Poppins;color:var(--accentDark)">Payment Method</h3>
+<h3 style="margin:0 0 12px;font-family:Poppins;color:var(--accentDark)">Payment Method</h3>
         <div style="display:flex;flex-direction:column;gap:10px" id="payment-methods">
           <div class="payment-option selected" data-method="cod"><div class="radio-dot"></div><i class="fa-solid fa-money-bill-wave pay-icon"></i><div><div style="font-weight:700;color:#111">Cash on Delivery</div><div class="muted" style="font-size:12px">Pay when your order arrives</div></div></div>
           <div class="payment-option" data-method="online"><div class="radio-dot"></div><i class="fa-solid fa-credit-card pay-icon"></i><div><div style="font-weight:700;color:#111">Pay Online (UPI)</div><div class="muted" style="font-size:12px">Pay via UPI, Google Pay, PhonePe</div></div></div>
@@ -611,31 +612,34 @@ function CheckoutView(){
   
   setTimeout(()=>{
     const map=L.map('checkout-map').setView([20.5937,78.9629],5);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OSM'}).addTo(map);
+    // Updated to CartoDB tiles to prevent access blocking issue
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{attribution:'&copy; CartoDB'}).addTo(map);
     let marker=null;
     function setMarker(lat,lng){if(marker)map.removeLayer(marker);marker=L.marker([lat,lng]).addTo(map);map.setView([lat,lng],15);$("#ch-lat").value=lat;$("#ch-lng").value=lng;$("#ch-loc-text").textContent=`Location: ${lat.toFixed(5)}, ${lng.toFixed(5)}`}
     map.on('click',e=>setMarker(e.latlng.lat,e.latlng.lng));
+    
+    // Invalidate size to prevent map loading weirdly
     setTimeout(() => map.invalidateSize(), 300);
 
-    const useGps = () => {
-      if(!navigator.geolocation) return toast("Geolocation not supported.");
-      toast("Finding your location...");
-      navigator.geolocation.getCurrentPosition(
-        pos => { setMarker(pos.coords.latitude, pos.coords.longitude); toast("Location found!"); },
-        err => { 
-          let m = "Permission denied.";
-          if(err.code === 2) m = "Position unavailable.";
-          if(err.code === 3) m = "Request timed out.";
-          toast("Error: " + m);
-        },
-        { enableHighAccuracy: true, timeout: 8000 }
-      );
-    };
+    // Explicit high-accuracy GPS button
+    $("#ch-use-gps").addEventListener("click",()=>{
+        if(navigator.geolocation){
+            toast("Getting your location...");
+            navigator.geolocation.getCurrentPosition(
+                pos=>setMarker(pos.coords.latitude,pos.coords.longitude),
+                err=>alert("Could not get location. Please allow permissions or check device settings."),
+                {enableHighAccuracy: true, timeout: 10000}
+            );
+        } else {
+            alert("Geolocation not supported.");
+        }
+    });
     
-    $("#ch-use-gps").addEventListener("click", useGps);
-    // Silent auto-try on load
-    if(navigator.geolocation) navigator.geolocation.getCurrentPosition(p=>setMarker(p.coords.latitude, p.coords.longitude), null, {enableHighAccuracy:true, timeout:5000});
-  },200);
+    // Auto prompt location on load
+    if(navigator.geolocation){
+        navigator.geolocation.getCurrentPosition(pos=>setMarker(pos.coords.latitude,pos.coords.longitude), null, {enableHighAccuracy: true, timeout: 5000});
+    }
+  },100);
   
   let payMethod="cod";
   $$("#payment-methods .payment-option").forEach(opt=>opt.addEventListener("click",()=>{$$("#payment-methods .payment-option").forEach(o=>o.classList.remove("selected"));opt.classList.add("selected");payMethod=opt.dataset.method}));
@@ -749,6 +753,7 @@ function DeliveryDashboardView(){
   const pickedCount=myOrders.filter(o=>o.deliveryStatus==='Picked Up').length;
   const deliveredCount=myOrders.filter(o=>o.deliveryStatus==='Delivered').length;
   
+  // Digital Wallet Calculation
   const myDelivered=myOrders.filter(o=>o.deliveryStatus==='Delivered');
   const walletBalance=myDelivered.reduce((sum, o) => {
        const shippingTotal = o.items ? o.items.reduce((s, it) => s + (typeof it.shipping === 'number' ? it.shipping : 50), 0) : 50;
@@ -758,6 +763,8 @@ function DeliveryDashboardView(){
   $("#view").innerHTML=`
     <section style="padding:14px">
       <div class="notif-banner"><i class="fa-solid fa-circle-check" style="color:var(--success)"></i><div><strong>Active Delivery Partner</strong> — Zone: ${escapeHtml(app.deliveryFrom||'')} to ${escapeHtml(app.deliveryTo||'')}</div></div>
+      
+      <!-- Digital Wallet Card -->
       <div class="card pad" style="margin-bottom:16px; background: linear-gradient(135deg, #18A957 0%, #0d7a3d 100%); color:white;">
           <div style="font-size:14px; opacity:0.9;">Digital Wallet Balance (Earnings)</div>
           <div style="font-size:32px; font-weight:bold; font-family:Poppins; margin-top:4px; display:flex; align-items:center; gap:8px;">
@@ -765,6 +772,7 @@ function DeliveryDashboardView(){
           </div>
           <div style="font-size:12px; margin-top:8px; opacity:0.8;">Earned from ${myDelivered.length} completed deliveries</div>
       </div>
+
       <div class="del-stat-grid">
         <div class="del-stat"><div class="num">${acceptedCount}</div><div class="lbl">Accepted</div></div>
         <div class="del-stat"><div class="num">${pickedCount}</div><div class="lbl">Picked Up</div></div>
@@ -869,7 +877,8 @@ function JoinTeamView(){
   if(PROFILE.email)$("#jt-email").value=PROFILE.email;if(PROFILE.name)$("#jt-name").value=PROFILE.name;if(PROFILE.phone)$("#jt-phone").value=PROFILE.phone;
   setTimeout(()=>{
     const map=L.map('jt-map').setView([20.5937,78.9629],5);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OSM'}).addTo(map);
+    // Updated to CartoDB tiles to prevent access blocking issue
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{attribution:'&copy; CartoDB'}).addTo(map);
     let markers=[];let clickCount=0;
     const greenIcon=L.icon({iconUrl:'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png',shadowUrl:'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',iconSize:[25,41],iconAnchor:[12,41]});
     const redIcon=L.icon({iconUrl:'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',shadowUrl:'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',iconSize:[25,41],iconAnchor:[12,41]});
@@ -963,6 +972,7 @@ function OrderDetailView(orderId){
   const isCancelled = o.status.includes('Cancelled');
   let timerHtml = '';
   
+  // 30 MINUTE TIMER LOGIC ADDED HERE
   if (!isDelivered && !isCancelled) {
       timerHtml = `<div class="card pad" style="margin-bottom:12px; text-align:center; background:#FFF8E1; border-color:#FFE082;">
           <h4 style="margin:0; color:#F57C00; font-family:Poppins;"><i class="fa-solid fa-stopwatch"></i> Estimated Delivery</h4>
@@ -973,7 +983,7 @@ function OrderDetailView(orderId){
       setTimeout(() => {
           const timerEl = document.getElementById(`order-timer-${orderId}`);
           if(!timerEl) return;
-          const targetTime = o.createdAt + 30 * 60 * 1000;
+          const targetTime = o.createdAt + 30 * 60 * 1000; // 30 mins
           const updateTimer = () => {
               if(!document.getElementById(`order-timer-${orderId}`)) return clearInterval(intv);
               const now = Date.now();
@@ -987,7 +997,7 @@ function OrderDetailView(orderId){
                   timerEl.textContent = `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')} Min`;
               }
           };
-          updateTimer();
+          updateTimer(); // Initial call
           const intv = setInterval(updateTimer, 1000);
       }, 100);
   }
