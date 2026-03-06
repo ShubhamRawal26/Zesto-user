@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Saphau Foods</title>
+<title>Zesto</title>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer"/>
@@ -64,6 +64,7 @@ label{font-size:13px;color:#111;margin:10px 0 6px;display:block}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;font-weight:700;border:none;border-radius:14px;padding:14px 16px;background:var(--accent);color:var(--accentText);transition:background .2s}
 .btn:hover{background:var(--accentDark)}
 .btn:active{transform:translateY(1px)}
+.btn:disabled{background:#ccc;color:#666;cursor:not-allowed;transform:none}
 .btn-outline{background:#fff;color:#111;border:1px solid var(--line)}
 .btn-outline:hover{background:var(--accentLight);border-color:var(--accent)}
 .btn-block{width:100%}
@@ -112,7 +113,7 @@ label{font-size:13px;color:#111;margin:10px 0 6px;display:block}
 .animated-banner-wrap{background:linear-gradient(135deg,var(--accent) 0%,var(--accentDark) 100%);color:var(--accentText);overflow:hidden;white-space:nowrap;position:relative;height:36px;line-height:36px;text-align:center;font-size:14px;font-weight:600}
 .animated-banner-text{display:inline-block;padding-left:100%;animation:marquee 20s linear infinite}
 @keyframes marquee{0%{transform:translate(0,0)}100%{transform:translate(-100%,0)}}
-.like-btn{position:absolute;top:10px;left:10px;width:36px;height:36px;border-radius:999px;background:rgba(255,255,255,.7);backdrop-filter:blur(4px);display:grid;place-items:center;color:#9ca3af;font-size:18px;box-shadow:var(--shadow-sm);transition:color .2s}
+.like-btn{position:absolute;top:10px;left:10px;width:36px;height:36px;border-radius:999px;background:rgba(255,255,255,.7);backdrop-filter:blur(4px);display:grid;place-items:center;color:#9ca3af;font-size:18px;box-shadow:var(--shadow-sm);transition:color .2s;z-index:15}
 .like-btn.liked{color:red}
 .payment-option{display:flex;align-items:center;gap:12px;padding:14px;border:2px solid var(--line);border-radius:14px;cursor:pointer;transition:border-color .2s,background .2s;background:#fff}
 .payment-option:hover{border-color:#ccc}
@@ -173,9 +174,30 @@ label{font-size:13px;color:#111;margin:10px 0 6px;display:block}
 .del-stat{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px;text-align:center}
 .del-stat .num{font-size:24px;font-weight:700;font-family:Poppins;color:var(--accent)}
 .del-stat .lbl{font-size:11px;color:var(--muted);margin-top:2px}
+
+/* City Modal Overlay */
+#city-modal-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(5px);
+  z-index:9999;display:none;flex-direction:column;align-items:center;justify-content:center;padding:20px;
+}
+.city-modal-box{background:#fff;width:100%;max-width:400px;border-radius:24px;padding:24px;text-align:center;box-shadow:0 20px 40px rgba(0,0,0,0.2)}
+.city-option{display:flex;align-items:center;justify-content:center;gap:10px;padding:14px;border:1px solid var(--line);border-radius:14px;margin-bottom:10px;cursor:pointer;transition:all 0.2s;font-weight:600;}
+.city-option:hover{border-color:var(--accent);background:var(--accentLight);}
 </style>
 </head>
 <body>
+
+<!-- City Selection Prompt (Appears on First Load) -->
+<div id="city-modal-overlay">
+  <div class="city-modal-box">
+    <div style="font-size:48px; color:var(--accent); margin-bottom:12px;"><i class="fa-solid fa-location-dot"></i></div>
+    <h2 style="margin:0 0 8px; font-family:Poppins; color:var(--accentDark)">Welcome to Zesto</h2>
+    <p class="muted" style="margin:0 0 20px;">Please select your city to continue and see available products & pricing.</p>
+    <div id="city-list">
+      <!-- Cities will be injected here -->
+    </div>
+  </div>
+</div>
 
 <div id="store-app">
   <div class="animated-banner-wrap" id="animated-banner-wrap" style="display:none">
@@ -185,8 +207,8 @@ label{font-size:13px;color:#111;margin:10px 0 6px;display:block}
     <header class="topbar">
       <div class="topbar-inner">
         <button id="back-btn" class="icon-round" aria-label="Back" style="display:none"><i class="fa-solid fa-arrow-left"></i></button>
-        <img id="app-logo" class="topbar-logo" src="" alt="" style="display:none">
-        <h1 id="page-title" class="title">Saphau Foods</h1>
+        <img id="app-logo" class="topbar-logo" src="" alt="Zesto" style="display:none">
+        <h1 id="page-title" class="title">Zesto</h1>
       </div>
     </header>
     <main id="view" aria-live="polite" style="padding-bottom:96px"></main>
@@ -205,7 +227,7 @@ label{font-size:13px;color:#111;margin:10px 0 6px;display:block}
 <button class="chatbot-icon" id="chatbot-toggle"><i class="fa-solid fa-comment-dots"></i></button>
 <div class="chatbot-popup" id="chatbot-popup">
   <div class="chatbot-header">
-    <div style="font-weight:600">Saphau AI</div>
+    <div style="font-weight:600">Zesto AI</div>
     <button class="icon-round" style="background:transparent;border:none;color:var(--accentText);width:28px;height:28px" id="chatbot-close"><i class="fa-solid fa-xmark"></i></button>
   </div>
   <div class="chatbot-body" id="chatbot-body">
@@ -224,6 +246,7 @@ const escapeHtml=(s="")=>s.replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&
 const toast=msg=>{const t=$("#toast");t.textContent=msg;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),1400)};
 const routeTo=hash=>{location.hash=hash};
 
+// --- GLOBALS & FIREBASE ---
 let PROFILE=readLocal("sf_profile",{name:"",email:"",phone:"",address:"",pincode:"",city:"",state:"",district:"",landmark:"",avatar:"",isComplete:false,favorites:[]});
 const saveProfile=()=>writeLocal("sf_profile",PROFILE);
 const hasCompleteProfile=()=>!!(PROFILE.name&&PROFILE.email&&PROFILE.phone&&PROFILE.address&&PROFILE.pincode);
@@ -231,7 +254,24 @@ const hasCompleteProfile=()=>!!(PROFILE.name&&PROFILE.email&&PROFILE.phone&&PROF
 let PRODUCTS=[];
 let CART=readLocal("sf_cart",[]);
 const saveCart=()=>writeLocal("sf_cart",CART);
-const cartTotal=()=>CART.reduce((a,c)=>{const p=PRODUCTS.find(x=>x.id===c.productId);return a+(p?((p.price||0)*c.qty+(p.shipping||50)):0)},0);
+
+// --- CITY PRICING & SELECTION LOGIC ---
+let USER_CITY = localStorage.getItem('zesto_city');
+let ALLOWED_CITIES = ['Jaipur', 'Delhi', 'Mumbai']; // Fallback cities
+
+const getPrice = (p) => {
+    if(!p) return 0;
+    // Check if city-specific price exists for the chosen city
+    if(USER_CITY && p.cityPrices && p.cityPrices[USER_CITY]){
+        return Number(p.cityPrices[USER_CITY]);
+    }
+    return Number(p.price || 0);
+};
+
+// Fixes the delivery charge `0` bug by strictly checking typeof
+const getShipping = (p) => p ? (typeof p.shipping === 'number' ? p.shipping : 50) : 50;
+
+const cartTotal=()=>CART.reduce((a,c)=>{const p=PRODUCTS.find(x=>x.id===c.productId);return a+(p?(getPrice(p)*c.qty+getShipping(p)):0)},0);
 
 let ORDERS=[];let RATINGS=[];let DELIVERY_APPS=[];
 let HERO_IMAGE_URL="";let BANNER_TEXT="";let APP_LOGO_URL="";
@@ -245,23 +285,57 @@ const deliveryAppsRef=db.ref('deliveryApplications');
 let dataFetched={products:false,orders:false,ratings:false,config:false};
 
 function showLoader(){$("#view").innerHTML=`<div class="loader"><div class="dot"></div><div class="dot"></div><div class="dot"></div><div style="color:var(--accent);font-weight:600">Loading...</div></div>`}
-function checkAndRender(){if(dataFetched.products&&dataFetched.orders&&dataFetched.ratings&&dataFetched.config)render()}
+
+function checkCitySelection() {
+    if (!USER_CITY) {
+        $("#city-modal-overlay").style.display = "flex";
+        $("#city-list").innerHTML = ALLOWED_CITIES.map(c => `
+            <div class="city-option" onclick="selectCity('${escapeHtml(c)}')">
+               <i class="fa-solid fa-map-pin" style="color:var(--accent)"></i> ${escapeHtml(c)}
+            </div>
+        `).join('');
+        return false;
+    }
+    $("#city-modal-overlay").style.display = "none";
+    return true;
+}
+
+window.selectCity = (c) => { 
+    localStorage.setItem('zesto_city', c); 
+    USER_CITY = c; 
+    PROFILE.city = c; // optionally update profile
+    saveProfile();
+    checkCitySelection(); 
+    render(); 
+};
+
+function checkAndRender(){
+    if(dataFetched.products&&dataFetched.orders&&dataFetched.ratings&&dataFetched.config){
+        if(checkCitySelection()){
+            render();
+        }
+    }
+}
 
 productsRef.on('value',snap=>{PRODUCTS=snap.val()?Object.values(snap.val()):[];PRODUCTS.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));dataFetched.products=true;checkAndRender()});
 ordersRef.on('value',snap=>{ORDERS=snap.val()?Object.values(snap.val()):[];ORDERS.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));dataFetched.orders=true;checkAndRender()});
 ratingsRef.on('value',snap=>{RATINGS=snap.val()?Object.values(snap.val()):[];dataFetched.ratings=true;checkAndRender()});
-appConfigRef.on('value',snap=>{const c=snap.val()||{};HERO_IMAGE_URL=c.heroImage||"";BANNER_TEXT=c.bannerText||"";APP_LOGO_URL=c.appLogo||"";
-  if(BANNER_TEXT){$("#animated-banner-text").textContent=BANNER_TEXT;$("#animated-banner-wrap").style.display="block"}else{$("#animated-banner-wrap").style.display="none"}
-  if(APP_LOGO_URL){$("#app-logo").src=APP_LOGO_URL;$("#app-logo").style.display="block"}else{$("#app-logo").style.display="none"}
-  dataFetched.config=true;checkAndRender()});
-deliveryAppsRef.on('value',snap=>{DELIVERY_APPS=snap.val()?Object.values(snap.val()):[];DELIVERY_APPS.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));updateTabbar();if(dataFetched.products)render()});
+appConfigRef.on('value',snap=>{
+    const c=snap.val()||{};
+    HERO_IMAGE_URL=c.heroImage||"";BANNER_TEXT=c.bannerText||"";APP_LOGO_URL=c.appLogo||"";
+    if(c.allowedCities) ALLOWED_CITIES = c.allowedCities.split(',').map(s=>s.trim()); // Parse admin cities
+    
+    if(BANNER_TEXT){$("#animated-banner-text").textContent=BANNER_TEXT;$("#animated-banner-wrap").style.display="block"}else{$("#animated-banner-wrap").style.display="none"}
+    if(APP_LOGO_URL){$("#app-logo").src=APP_LOGO_URL;$("#app-logo").style.display="block"}else{$("#app-logo").style.display="none"}
+    dataFetched.config=true;checkAndRender()});
+deliveryAppsRef.on('value',snap=>{DELIVERY_APPS=snap.val()?Object.values(snap.val()):[];DELIVERY_APPS.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));updateTabbar();if(dataFetched.products && USER_CITY)render()});
 
 function parseRoute(){const h=location.hash.replace(/^#/,"")||"shop";return{parts:h.split("?")[0].split("/").filter(Boolean)}}
 function setTopbar(title,showBack){$("#page-title").textContent=title;$("#back-btn").style.display=showBack?"inline-grid":"none"}
 function setActiveTab(name){$$(".tab").forEach(t=>t.classList.toggle("active",t.dataset.tab===name))}
 $("#back-btn").addEventListener("click",()=>history.back());
-window.addEventListener("hashchange",render);
-window.addEventListener("popstate",render);
+window.addEventListener("hashchange",()=>{ if(checkCitySelection()) render() });
+window.addEventListener("popstate",()=>{ if(checkCitySelection()) render() });
 
 function ensureProfileBefore(nextHash){if(!hasCompleteProfile()){writeLocal("sf_next",nextHash||"#/checkout");routeTo("#/profile/setup");return false}return true}
 function renderStarIcons(rating,max=5){let h='';for(let i=1;i<=max;i++)h+=i<=rating?'<i class="fa-solid fa-star"></i>':'<i class="fa-solid fa-star empty"></i>';return h}
@@ -313,11 +387,11 @@ function HomeView(){
         ${HERO_IMAGE_URL?`<div class="hero-img"><img src="${HERO_IMAGE_URL}" alt="Hero"/></div>`:''}
         <div class="pad" style="padding:16px">
           <h2 style="margin:0 0 6px;font-family:Poppins;color:var(--accentDark)">Fresh & Delicious. Every Time.</h2>
-          <p class="muted" style="margin:0 0 12px">Authentic Indian cuisine made with care.</p>
+          <p class="muted" style="margin:0 0 12px">Authentic Indian cuisine delivered in ${escapeHtml(USER_CITY)}.</p>
           <button class="btn" onclick="routeTo('#/shop')"><i class="fa-solid fa-utensils"></i> Order Now</button>
         </div>
       </div>
-      <h3 style="margin:16px 4px 8px;font-family:Poppins;color:var(--accentDark)">Featured</h3>
+      <h3 style="margin:16px 4px 8px;font-family:Poppins;color:var(--accentDark)">Featured in ${escapeHtml(USER_CITY)}</h3>
       <div class="grid" id="home-grid"></div>
       <div class="join-banner">
         <h3><i class="fa-solid fa-motorcycle"></i> Become a Delivery Partner</h3>
@@ -361,14 +435,18 @@ function ProductCard(p){
   const avg=getProductRating(p.id);
   const stars=avg>0?`<div class="star-rating">${avg} <i class="fa-solid fa-star"></i></div>`:'';
   const isFav=PROFILE.favorites.includes(p.id);
+  const outOfStockOverlay = p.outOfStock ? `<div style="position:absolute; inset:0; background:rgba(255,255,255,0.6); backdrop-filter:grayscale(100%); display:flex; align-items:center; justify-content:center; z-index:10;"><span style="background:#E11D48; color:white; padding:6px 12px; border-radius:999px; font-weight:bold; font-size:12px; letter-spacing:1px;">OUT OF STOCK</span></div>` : '';
+  const price = getPrice(p);
+  const shipping = getShipping(p);
+  
   return`<a class="card p-card" href="#/product/${p.id}" data-open="${p.id}">
     <button class="like-btn ${isFav?'liked':''}" data-product-id="${p.id}" aria-label="Fav"><i class="fa-solid fa-heart"></i></button>
-    <div class="p-img"><img src="${p.imageUrls[0]||""}" alt="${escapeHtml(p.name)}">${off}</div>
+    <div class="p-img"><img src="${p.imageUrls[0]||""}" alt="${escapeHtml(p.name)}">${off}${outOfStockOverlay}</div>
     <div class="p-meta"><div class="p-title">${escapeHtml(p.name)}</div>
       <div style="display:flex;align-items:center;justify-content:space-between">
-        <div class="price-line"><div style="font-weight:700;color:var(--accentDark)">${money(p.price||0)}</div>${p.priceMrp?`<div class="strike">${money(p.priceMrp)}</div>`:""}</div>${stars}
+        <div class="price-line"><div style="font-weight:700;color:var(--accentDark)">${money(price)}</div>${p.priceMrp?`<div class="strike">${money(p.priceMrp)}</div>`:""}</div>${stars}
       </div>
-      <div class="muted" style="font-size:12px">Shipping: ${money(p.shipping||50)}</div>
+      <div class="muted" style="font-size:12px">Shipping: ${shipping === 0 ? 'Free' : money(shipping)}</div>
     </div></a>`;
 }
 
@@ -388,27 +466,32 @@ function ProductView(id){
   const pRatings=RATINGS.filter(r=>r.productId===id);
   const isOrdered=ORDERS.some(o=>o.customer&&o.customer.email===PROFILE.email&&o.items&&o.items.some(i=>i.productId===id));
   const isFav=PROFILE.favorites.includes(p.id);
-  const shipping=p.shipping||50;
+  const shipping=getShipping(p);
+  const price = getPrice(p);
+  
   let reviewsHtml='';
   if(pRatings.length>0){
     reviewsHtml=`<div style="margin-top:20px"><h4 style="margin:0 0 12px;font-family:Poppins;color:var(--accentDark)"><i class="fa-solid fa-comments"></i> Customer Reviews (${pRatings.length})</h4>
       ${pRatings.map(r=>`<div class="review-card"><div style="display:flex;align-items:center;justify-content:space-between"><div class="review-author">${escapeHtml(r.userName||r.userEmail||'Anonymous')}</div><div class="review-stars">${renderStarIcons(r.rating)}</div></div>${r.reviewText?`<div class="review-text">${escapeHtml(r.reviewText)}</div>`:''}<div class="review-date">${r.createdAt?new Date(r.createdAt).toLocaleDateString():''}</div></div>`).join('')}</div>`;
   }
+  
   $("#view").innerHTML=`
     <section>
-      <div class="hero-img"><img src="${p.imageUrls[0]||""}" alt="${escapeHtml(p.name)}"></div>
+      <div class="hero-img" style="position:relative"><img src="${p.imageUrls[0]||""}" alt="${escapeHtml(p.name)}" style="${p.outOfStock ? 'filter:grayscale(100%)' : ''}">
+        ${p.outOfStock ? `<div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center;"><span style="background:#E11D48; color:white; padding:10px 20px; border-radius:999px; font-weight:bold; font-size:18px; letter-spacing:1px; box-shadow:var(--shadow);">OUT OF STOCK</span></div>` : ''}
+      </div>
       <div style="padding:0 16px 16px">
         <div style="display:flex;align-items:start;justify-content:space-between;gap:8px">
           <div>
             <h2 style="margin:0 0 6px;font-family:Poppins;color:var(--accentDark)">${escapeHtml(p.name)}</h2>
             <div class="price-line" style="margin:6px 0">
-              <div style="font-family:Poppins;font-weight:700;font-size:22px;color:var(--accentDark)">${money(p.price||0)}</div>
+              <div style="font-family:Poppins;font-weight:700;font-size:22px;color:var(--accentDark)">${money(price)}</div>
               ${p.priceMrp?`<div class="strike">${money(p.priceMrp)}</div>`:""}
               ${p.discountPercent?`<span class="badge-off">${p.discountPercent}% OFF</span>`:""}
             </div>
             ${avg>0?`<div class="star-rating">${avg} <i class="fa-solid fa-star"></i> (${pRatings.length} reviews)</div>`:''}
             <div class="muted" style="max-width:560px">${escapeHtml(p.description||"")}</div>
-            <div class="muted" style="margin-top:8px">Shipping: ${money(shipping)}</div>
+            <div class="muted" style="margin-top:8px">Shipping: ${shipping === 0 ? 'Free Delivery' : money(shipping)}</div>
           </div>
           <button class="icon-round ${isFav?'liked':''}" id="product-like-btn" style="${isFav?'color:red':''}"><i class="fa-solid fa-heart"></i></button>
         </div>
@@ -425,9 +508,20 @@ function ProductView(id){
         ${reviewsHtml}
       </div>
     </section>`;
+    
   let selectedQty=1,selectedRating=0;
   $("#qty-row").querySelectorAll(".size-btn").forEach(b=>b.addEventListener("click",()=>{$("#qty-row").querySelectorAll(".size-btn").forEach(x=>x.classList.remove("active"));b.classList.add("active");selectedQty=Number(b.dataset.qty)}));
   $("#product-like-btn").addEventListener("click",e=>{e.stopPropagation();toggleFavorite(p.id,$("#product-like-btn"))});
+  
+  if (p.outOfStock) {
+      const btnBuy = $("#buy-now"); const btnAdd = $("#add-to-cart");
+      btnBuy.disabled = true; btnBuy.innerHTML = `<i class="fa-solid fa-ban"></i> Out of Stock`;
+      btnAdd.disabled = true; btnAdd.innerHTML = `<i class="fa-solid fa-ban"></i> Out of Stock`;
+  } else {
+      $("#buy-now").addEventListener("click",()=>{addToCart(p.id,"NA",selectedQty);if(ensureProfileBefore("#/cod/review")){const items=[{productId:p.id,name:p.name,price:getPrice(p),mrp:p.priceMrp,shipping:shipping,qty:selectedQty,size:"NA"}];const amount=price*selectedQty+shipping;const orderId="ZST-"+Date.now().toString().slice(-8);writeLocal("sf_pending",{orderId,items,customer:{...PROFILE},amount,status:"COD - Pending"});routeTo("#/cod/review")}});
+      $("#add-to-cart").addEventListener("click",()=>{addToCart(p.id,"NA",selectedQty);toast("Added to cart");routeTo("#/cart")});
+  }
+
   const rateStars=$("#rate-stars");
   if(rateStars){
     const existing=RATINGS.find(r=>r.productId===id&&r.userEmail===PROFILE.email);
@@ -436,8 +530,6 @@ function ProductView(id){
   }
   const submitBtn=$("#submit-review-btn");
   if(submitBtn)submitBtn.addEventListener("click",()=>{if(!selectedRating){alert("Please select a star rating.");return}submitRating(id,selectedRating,PROFILE.email,PROFILE.name,($("#review-text")?.value||"").trim())});
-  $("#buy-now").addEventListener("click",()=>{addToCart(p.id,"NA",selectedQty);if(ensureProfileBefore("#/cod/review")){const items=[{productId:p.id,name:p.name,price:p.price,mrp:p.priceMrp,shipping:shipping,qty:selectedQty,size:"NA"}];const amount=(p.price||0)*selectedQty+shipping;const orderId="SCF-"+Date.now().toString().slice(-8);writeLocal("sf_pending",{orderId,items,customer:{...PROFILE},amount,status:"COD - Pending"});routeTo("#/cod/review")}});
-  $("#add-to-cart").addEventListener("click",()=>{addToCart(p.id,"NA",selectedQty);toast("Added to cart");routeTo("#/cart")});
 }
 
 function submitRating(productId,rating,userEmail,userName,reviewText){
@@ -451,13 +543,13 @@ function toggleFavorite(pid,btn){if(PROFILE.favorites.includes(pid)){PROFILE.fav
 function CartView(){
   setTopbar("Shopping Cart",true);setActiveTab("cart");
   const total=cartTotal();
-  const shipT=CART.reduce((a,c)=>{const p=PRODUCTS.find(x=>x.id===c.productId);return a+(p?(p.shipping||50):0)},0);
+  const shipT=CART.reduce((a,c)=>{const p=PRODUCTS.find(x=>x.id===c.productId);return a+(p?getShipping(p):0)},0);
   const sub=total-shipT;
   $("#view").innerHTML=`<section style="padding:14px">${CART.length===0?`<div class="card pad" style="text-align:center;padding:26px"><div style="font-size:48px;color:var(--accent);margin-bottom:12px"><i class="fa-solid fa-cart-shopping"></i></div><div class="muted">Your cart is empty.</div><div style="margin-top:10px"><a class="btn btn-outline" href="#/shop">Browse Products</a></div></div>`:`
     <div class="cart-list" id="cart-list">${CART.map(r=>CartItem(r)).join("")}</div>
     <div class="card sticky-sheet" style="margin-top:16px">
       <div class="row"><div class="muted">Subtotal</div><div>${money(sub)}</div></div>
-      <div class="row"><div class="muted">Shipping</div><div>${money(shipT)}</div></div>
+      <div class="row"><div class="muted">Shipping</div><div>${shipT === 0 ? 'Free' : money(shipT)}</div></div>
       <div class="sep"></div>
       <div class="row" style="font-weight:800;color:var(--accentDark)"><div>Total</div><div>${money(total)}</div></div>
       <div style="margin-top:10px"><button class="btn btn-block" id="to-checkout"><i class="fa-solid fa-lock"></i> Proceed to Checkout</button></div>
@@ -467,7 +559,9 @@ function CartView(){
 }
 function CartItem(it){
   const p=PRODUCTS.find(x=>x.id===it.productId);if(!p)return"";
-  const iT=(p.price||0)*it.qty+(p.shipping||50);
+  const pPrice = getPrice(p);
+  const pShipping = getShipping(p);
+  const iT= pPrice*it.qty + pShipping;
   return`<div class="cart-item" data-id="${it.productId}"><img src="${p.imageUrls[0]||""}" alt="${escapeHtml(p.name)}"><div><div style="font-weight:700">${escapeHtml(p.name)}</div><div class="price-line" style="margin-top:4px"><div style="font-weight:700;color:var(--accentDark)">${money(iT)}</div>${p.priceMrp?`<div class="strike">${money((p.priceMrp||0)*it.qty)}</div>`:""}</div><div class="qty"><button class="circle-btn" data-dec>-</button><div>${it.qty}</div><button class="circle-btn primary" data-inc>+</button><button class="circle-btn" data-rem><i class="fa-regular fa-trash-can"></i></button></div></div></div>`;
 }
 function attachCartHandlers(){$$("#cart-list .cart-item").forEach(item=>{const pid=item.dataset.id;item.querySelector("[data-inc]").addEventListener("click",()=>changeQty(pid,+1));item.querySelector("[data-dec]").addEventListener("click",()=>changeQty(pid,-1));item.querySelector("[data-rem]").addEventListener("click",()=>removeFromCart(pid))})}
@@ -478,7 +572,7 @@ function removeFromCart(pid){CART=CART.filter(x=>x.productId!==pid);saveCart();r
 function CheckoutView(){
   if(CART.length===0){routeTo("#/cart");return}
   setTopbar("Checkout",true);setActiveTab("");
-  const total=cartTotal();const shipT=CART.reduce((a,c)=>{const p=PRODUCTS.find(x=>x.id===c.productId);return a+(p?(p.shipping||50):0)},0);const sub=total-shipT;
+  const total=cartTotal();const shipT=CART.reduce((a,c)=>{const p=PRODUCTS.find(x=>x.id===c.productId);return a+(p?getShipping(p):0)},0);const sub=total-shipT;
   $("#view").innerHTML=`
     <section style="padding:14px">
       <div class="card pad">
@@ -487,11 +581,11 @@ function CheckoutView(){
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div><label>Email</label><input id="ch-email" type="email" required></div><div><label>Phone</label><input id="ch-phone" type="tel" required></div></div>
         <h3 style="margin:16px 0 8px;font-family:Poppins;color:var(--accentDark)">Shipping Address</h3>
         <label>Address</label><input id="ch-address" required>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div><label>City</label><input id="ch-city"></div><div><label>Pincode</label><input id="ch-pincode" required></div></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div><label>City</label><input id="ch-city" readonly style="background:#f0f0f0; color:#666;"></div><div><label>Pincode</label><input id="ch-pincode" required></div></div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div><label>State</label><input id="ch-state"></div><div><label>District</label><input id="ch-district"></div></div>
         <label>Landmark</label><input id="ch-landmark">
         <h3 style="margin:16px 0 8px;font-family:Poppins;color:var(--accentDark)"><i class="fa-solid fa-location-dot"></i> Delivery Location</h3>
-        <p class="muted" style="font-size:12px;margin:0 0 6px">Tap/click on the map to set your exact delivery location</p>
+        <p class="muted" style="font-size:12px;margin:0 0 6px">Tap/click on the map or use GPS to set your exact delivery location</p>
         <div id="checkout-map" class="map-container"></div>
         <input id="ch-lat" type="hidden"><input id="ch-lng" type="hidden">
         <div id="ch-loc-text" class="muted" style="font-size:12px;margin-top:6px"></div>
@@ -506,23 +600,31 @@ function CheckoutView(){
       </div>
       <div class="card sticky-sheet" style="margin-top:16px">
         <div class="row"><div class="muted">Subtotal</div><div>${money(sub)}</div></div>
-        <div class="row"><div class="muted">Shipping</div><div>${money(shipT)}</div></div>
+        <div class="row"><div class="muted">Shipping</div><div>${shipT === 0 ? 'Free' : money(shipT)}</div></div>
         <div class="sep"></div>
         <div class="row" style="font-weight:800;color:var(--accentDark)"><div>Total</div><div>${money(total)}</div></div>
         <div style="margin-top:10px"><button class="btn btn-block" id="checkout-next"><i class="fa-solid fa-check"></i> Place Order</button></div>
       </div>
     </section>`;
+    
   $("#ch-name").value=PROFILE.name||"";$("#ch-email").value=PROFILE.email||"";$("#ch-phone").value=PROFILE.phone||"";
-  $("#ch-address").value=PROFILE.address||"";$("#ch-city").value=PROFILE.city||"";$("#ch-pincode").value=PROFILE.pincode||"";
+  $("#ch-address").value=PROFILE.address||"";$("#ch-city").value=USER_CITY||PROFILE.city||"";$("#ch-pincode").value=PROFILE.pincode||"";
   $("#ch-state").value=PROFILE.state||"";$("#ch-district").value=PROFILE.district||"";$("#ch-landmark").value=PROFILE.landmark||"";
+  
   setTimeout(()=>{
     const map=L.map('checkout-map').setView([20.5937,78.9629],5);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OSM'}).addTo(map);
     let marker=null;
     function setMarker(lat,lng){if(marker)map.removeLayer(marker);marker=L.marker([lat,lng]).addTo(map);map.setView([lat,lng],15);$("#ch-lat").value=lat;$("#ch-lng").value=lng;$("#ch-loc-text").textContent=`Location: ${lat.toFixed(5)}, ${lng.toFixed(5)}`}
     map.on('click',e=>setMarker(e.latlng.lat,e.latlng.lng));
-    $("#ch-use-gps").addEventListener("click",()=>{if(navigator.geolocation){navigator.geolocation.getCurrentPosition(pos=>setMarker(pos.coords.latitude,pos.coords.longitude),()=>alert("Could not get location."))}else alert("Geolocation not supported.")});
+    
+    // Auto prompt location on load
+    if(navigator.geolocation){
+        navigator.geolocation.getCurrentPosition(pos=>setMarker(pos.coords.latitude,pos.coords.longitude), err => console.log("Location permission delayed/denied."));
+    }
+    $("#ch-use-gps").addEventListener("click",()=>{if(navigator.geolocation){navigator.geolocation.getCurrentPosition(pos=>setMarker(pos.coords.latitude,pos.coords.longitude),()=>alert("Could not get location. Please allow permissions."))}else alert("Geolocation not supported.")});
   },100);
+  
   let payMethod="cod";
   $$("#payment-methods .payment-option").forEach(opt=>opt.addEventListener("click",()=>{$$("#payment-methods .payment-option").forEach(o=>o.classList.remove("selected"));opt.classList.add("selected");payMethod=opt.dataset.method}));
   $("#checkout-next").addEventListener("click",()=>{
@@ -532,8 +634,11 @@ function CheckoutView(){
     PROFILE.isComplete=hasCompleteProfile();if(!PROFILE.isComplete){alert("Please fill name, email, phone, address and pincode.");return}
     saveProfile();
     const lat=$("#ch-lat").value;const lng=$("#ch-lng").value;
-    const items=CART.map(it=>{const p=PRODUCTS.find(x=>x.id===it.productId);return{productId:it.productId,name:p?.name,price:p?.price,mrp:p?.priceMrp,shipping:p?.shipping||50,qty:it.qty,size:"NA"}});
-    const amount=cartTotal();const orderId="SCF-"+Date.now().toString().slice(-8);
+    const items=CART.map(it=>{
+        const p=PRODUCTS.find(x=>x.id===it.productId);
+        return {productId:it.productId,name:p?.name,price:getPrice(p),mrp:p?.priceMrp,shipping:getShipping(p),qty:it.qty,size:"NA"}
+    });
+    const amount=cartTotal();const orderId="ZST-"+Date.now().toString().slice(-8);
     const orderBase={orderId,items,customer:{...PROFILE},amount,deliveryLocation:lat&&lng?{lat:Number(lat),lng:Number(lng)}:null};
     if(payMethod==="online"){writeLocal("sf_pending",{...orderBase,status:"Online Payment - Pending",paymentMethod:"online"});routeTo("#/pay/online")}
     else{writeLocal("sf_pending",{...orderBase,status:"COD - Pending",paymentMethod:"cod"});routeTo("#/cod/review")}
@@ -544,7 +649,7 @@ function OnlinePayView(){
   setTopbar("Pay Online",true);setActiveTab("");
   const pend=readLocal("sf_pending",null);if(!pend){routeTo("#/cart");return}
   const amount=pend.amount||0;const upiId="saphaufoods@upi";
-  const upiLink=`upi://pay?pa=${upiId}&pn=Saphau%20Foods&am=${amount}&cu=INR&tn=Order%20${pend.orderId}`;
+  const upiLink=`upi://pay?pa=${upiId}&pn=Zesto&am=${amount}&cu=INR&tn=Order%20${pend.orderId}`;
   $("#view").innerHTML=`
     <section style="padding:14px"><div class="card pad" style="text-align:center">
       <h3 style="margin:0 0 6px;font-family:Poppins;color:var(--accentDark)"><i class="fa-solid fa-qrcode"></i> Pay Online</h3>
@@ -576,7 +681,7 @@ function CODReviewView(){
   const pend=readLocal("sf_pending",null);if(!pend){routeTo("#/cart");return}
   const items=pend.items||[];
   const sub=items.reduce((a,it)=>a+((it.price||0)*it.qty),0);
-  const shipT=items.reduce((a,it)=>a+(it.shipping||50),0);
+  const shipT=items.reduce((a,it)=>a+(typeof it.shipping === 'number' ? it.shipping : 50),0);
   const grand=sub+shipT;
   const isOnline=pend.paymentMethod==="online";
   const payLabel=isOnline?"Online Payment (UPI)":"Cash on Delivery";
@@ -585,7 +690,7 @@ function CODReviewView(){
     <section style="padding:14px">
       <div class="card pad">
         <h3 style="margin:0 0 10px;font-family:Poppins;color:var(--accentDark)">Order Review</h3>
-        ${items.map(it=>`<div class="row" style="padding:8px 0;border-bottom:1px solid var(--line)"><div>${escapeHtml(it.name)} <span class="muted">x${it.qty}</span></div><div style="font-weight:700;color:var(--accentDark)">${money((it.price||0)*it.qty+(it.shipping||50))}</div></div>`).join("")}
+        ${items.map(it=>`<div class="row" style="padding:8px 0;border-bottom:1px solid var(--line)"><div>${escapeHtml(it.name)} <span class="muted">x${it.qty}</span></div><div style="font-weight:700;color:var(--accentDark)">${money((it.price||0)*it.qty+(typeof it.shipping === 'number' ? it.shipping : 50))}</div></div>`).join("")}
         <div class="row" style="margin-top:10px"><strong>Total</strong><strong style="color:var(--accentDark)">${money(grand)}</strong></div>
         <div style="margin-top:10px">${payBadge}</div>
       </div>
@@ -615,9 +720,9 @@ function CODSuccessView(){
 function ConfirmView(){
   setTopbar("Order Confirmation",true);setActiveTab("");
   const last=readLocal("sf_last_order",null);const items=last?.items||[];
-  const grand=items.reduce((a,it)=>a+((it.price||0)*it.qty+(it.shipping||50)),0);
+  const grand=items.reduce((a,it)=>a+((it.price||0)*it.qty+(typeof it.shipping === 'number' ? it.shipping : 50)),0);
   $("#view").innerHTML=`<section style="padding:14px"><div class="card pad" style="text-align:center"><div class="check-anim"><i class="fa-solid fa-check" style="font-size:36px"></i></div><h2 style="margin:6px 0;font-family:Poppins;color:var(--accentDark)">Thank you!</h2><div class="muted">Order <b>#${escapeHtml(last?.orderId||"")}</b></div></div>
-    <div class="card pad" style="margin-top:12px"><h3 style="margin:0 0 10px;font-family:Poppins;color:var(--accentDark)">Order Summary</h3>${items.map(it=>{const img=PRODUCTS.find(x=>x.id===it.productId)?.imageUrls?.[0]||"";return`<div style="display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)"><img src="${img}" style="width:48px;height:48px;object-fit:cover;border-radius:10px"><div style="flex:1"><div style="font-weight:700">${escapeHtml(it.name)}</div><div class="muted" style="font-size:13px">Qty ${it.qty}</div></div><div style="font-weight:700;color:var(--accentDark)">${money((it.price||0)*it.qty+(it.shipping||50))}</div></div>`}).join("")}
+    <div class="card pad" style="margin-top:12px"><h3 style="margin:0 0 10px;font-family:Poppins;color:var(--accentDark)">Order Summary</h3>${items.map(it=>{const img=PRODUCTS.find(x=>x.id===it.productId)?.imageUrls?.[0]||"";return`<div style="display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)"><img src="${img}" style="width:48px;height:48px;object-fit:cover;border-radius:10px"><div style="flex:1"><div style="font-weight:700">${escapeHtml(it.name)}</div><div class="muted" style="font-size:13px">Qty ${it.qty}</div></div><div style="font-weight:700;color:var(--accentDark)">${money((it.price||0)*it.qty+(typeof it.shipping === 'number' ? it.shipping : 50))}</div></div>`}).join("")}
       <div class="row" style="margin-top:10px"><div style="font-weight:700">Total</div><div style="font-weight:700;color:var(--accentDark)">${money(grand)}</div></div></div>
     <div style="margin:16px 0;display:flex;flex-direction:column;gap:10px"><a class="btn btn-block" href="#/account/orders">Track Order</a><a class="btn btn-outline btn-block" href="#/shop">Back to Shop</a></div></section>`;
 }
@@ -631,9 +736,27 @@ function DeliveryDashboardView(){
   const acceptedCount=myOrders.filter(o=>o.deliveryStatus==='Accepted').length;
   const pickedCount=myOrders.filter(o=>o.deliveryStatus==='Picked Up').length;
   const deliveredCount=myOrders.filter(o=>o.deliveryStatus==='Delivered').length;
+  
+  // Calculate Wallet Balance (Sum of shipping charges of delivered orders as points/money)
+  const myDelivered=myOrders.filter(o=>o.deliveryStatus==='Delivered');
+  const walletBalance=myDelivered.reduce((sum, o) => {
+       const shippingTotal = o.items ? o.items.reduce((s, it) => s + (typeof it.shipping === 'number' ? it.shipping : 50), 0) : 50;
+       return sum + shippingTotal; 
+  }, 0);
+
   $("#view").innerHTML=`
     <section style="padding:14px">
       <div class="notif-banner"><i class="fa-solid fa-circle-check" style="color:var(--success)"></i><div><strong>Active Delivery Partner</strong> — Zone: ${escapeHtml(app.deliveryFrom||'')} to ${escapeHtml(app.deliveryTo||'')}</div></div>
+      
+      <!-- Digital Wallet Card -->
+      <div class="card pad" style="margin-bottom:16px; background: linear-gradient(135deg, #18A957 0%, #0d7a3d 100%); color:white;">
+          <div style="font-size:14px; opacity:0.9;">Digital Wallet Balance (Earnings)</div>
+          <div style="font-size:32px; font-weight:bold; font-family:Poppins; margin-top:4px; display:flex; align-items:center; gap:8px;">
+            ${money(walletBalance)} <i class="fa-solid fa-coins" style="font-size:24px; color:#FFD700;"></i>
+          </div>
+          <div style="font-size:12px; margin-top:8px; opacity:0.8;">Earned from ${myDelivered.length} completed deliveries</div>
+      </div>
+
       <div class="del-stat-grid">
         <div class="del-stat"><div class="num">${acceptedCount}</div><div class="lbl">Accepted</div></div>
         <div class="del-stat"><div class="num">${pickedCount}</div><div class="lbl">Picked Up</div></div>
@@ -688,7 +811,7 @@ function DeliveryMyOrdersView(){
           ${o.deliveryStatus!=='Delivered'?`<div style="display:flex;gap:8px;margin-top:8px">
             ${o.deliveryStatus==='Accepted'?`<button class="btn btn-sm" style="background:#7C3AED" data-update="${o.firebaseKey}" data-status="Picked Up"><i class="fa-solid fa-box-open"></i> Picked Up</button>`:''}
             ${o.deliveryStatus==='Picked Up'?`<button class="btn btn-sm btn-success" data-update="${o.firebaseKey}" data-status="Delivered"><i class="fa-solid fa-circle-check"></i> Delivered</button>`:''}
-          </div>`:'<div class="muted" style="font-size:12px;margin-top:4px"><i class="fa-solid fa-circle-check" style="color:var(--success)"></i> Delivered</div>'}
+          </div>`:'<div class="muted" style="font-size:12px;margin-top:4px"><i class="fa-solid fa-circle-check" style="color:var(--success)"></i> Delivered & Commission Added to Wallet</div>'}
         </div>`).join('')}
     </section>`;
   $$("[data-update]").forEach(btn=>btn.addEventListener("click",()=>{
@@ -770,7 +893,7 @@ function ContactSupportView(){
     <section style="padding:14px">
       <div style="text-align:center;margin-bottom:20px"><div style="width:72px;height:72px;border-radius:999px;background:var(--accentLight);display:grid;place-items:center;margin:0 auto 10px"><i class="fa-solid fa-headset" style="font-size:32px;color:var(--accent)"></i></div><h2 style="margin:0 0 6px;font-family:Poppins;color:var(--accentDark)">Need Help?</h2><p class="muted">We're here to assist you</p></div>
       <a class="contact-card" href="mailto:sahpaufoodstore@gmail.com"><div class="contact-icon email-icon"><i class="fa-solid fa-envelope"></i></div><div><div style="font-weight:700">Email Us</div><div class="muted" style="font-size:13px">sahpaufoodstore@gmail.com</div></div></a>
-      <div class="contact-card" style="opacity:.6;cursor:default"><div class="contact-icon phone-icon"><i class="fa-solid fa-phone"></i></div><div><div style="font-weight:700">Call Us</div><div class="muted" style="font-size:13px">Coming Soon</div></div></div>
+      <a class="contact-card" href="tel:+919634258114"><div class="contact-icon phone-icon"><i class="fa-solid fa-phone"></i></div><div><div style="font-weight:700">Call Us</div><div class="muted" style="font-size:13px">+91 96342 58114</div></div></a>
       <div class="contact-card" style="opacity:.6;cursor:default"><div class="contact-icon whatsapp-icon"><i class="fa-brands fa-whatsapp"></i></div><div><div style="font-weight:700">WhatsApp</div><div class="muted" style="font-size:13px">Coming Soon</div></div></div>
     </section>`;
 }
@@ -782,12 +905,13 @@ function AccountView(){
   if(app&&app.status==='Approved')notifHtml=`<div class="notif-banner" style="margin-top:12px"><i class="fa-solid fa-circle-check" style="color:var(--success)"></i><div><strong>Delivery Partner Active</strong> — <a href="#/delivery/dashboard" style="color:var(--accent);font-weight:700">Go to Dashboard &rarr;</a></div></div>`;
   $("#view").innerHTML=`
     <section style="padding:14px">
-      <div class="card pad"><div style="display:flex;align-items:center;gap:12px"><div class="avatar"><img src="${PROFILE.avatar||'https://i.pravatar.cc/200?u=sf'}" alt="avatar"></div><div><div style="font-weight:700;font-size:18px;color:var(--accentDark)">${escapeHtml(PROFILE.name||'Guest')}</div><div class="muted">${escapeHtml(PROFILE.email||'')}</div></div></div></div>
+      <div class="card pad"><div style="display:flex;align-items:center;gap:12px"><div class="avatar"><img src="${PROFILE.avatar||'https://i.pravatar.cc/200?u=sf'}" alt="avatar"></div><div><div style="font-weight:700;font-size:18px;color:var(--accentDark)">${escapeHtml(PROFILE.name||'Guest')}</div><div class="muted">${escapeHtml(PROFILE.email||'')}</div><div class="chip" style="font-size:10px; padding:2px 8px; margin-top:4px;">${escapeHtml(USER_CITY||'City Not Selected')}</div></div></div></div>
       ${notifHtml}
       <div class="card pad" style="margin-top:12px">
         <a href="#/profile" class="row" style="padding:10px 0"><div><i class="fa-regular fa-user" style="color:var(--accent)"></i> Edit Profile</div><i class="fa-solid fa-chevron-right"></i></a><div class="sep"></div>
         <a href="#/account/orders" class="row" style="padding:10px 0"><div><i class="fa-regular fa-clipboard" style="color:var(--accent)"></i> Order History</div><i class="fa-solid fa-chevron-right"></i></a><div class="sep"></div>
         <a href="#/favorites" class="row" style="padding:10px 0"><div><i class="fa-regular fa-heart" style="color:var(--accent)"></i> My Favorites</div><i class="fa-solid fa-chevron-right"></i></a><div class="sep"></div>
+        <div class="row" style="padding:10px 0; cursor:pointer;" onclick="$('#city-modal-overlay').style.display='flex'"><div><i class="fa-solid fa-location-dot" style="color:var(--accent)"></i> Change City</div><i class="fa-solid fa-chevron-right"></i></div><div class="sep"></div>
         <a href="#/join-team" class="row" style="padding:10px 0"><div><i class="fa-solid fa-motorcycle" style="color:var(--accent)"></i> Delivery Partner</div><i class="fa-solid fa-chevron-right"></i></a><div class="sep"></div>
         <a href="#/contact-support" class="row" style="padding:10px 0"><div><i class="fa-solid fa-headset" style="color:var(--accent)"></i> Contact Support</div><i class="fa-solid fa-chevron-right"></i></a>
       </div>
@@ -800,7 +924,7 @@ function ProfileEditView(isSetup=false){
       <label>Name</label><input id="pfv-name" value="${escapeHtml(PROFILE.name||'')}">
       <label>Email</label><input id="pfv-email" type="email" value="${escapeHtml(PROFILE.email||'')}">
       <label>Phone</label><input id="pfv-phone" type="tel" value="${escapeHtml(PROFILE.phone||'')}">
-      <div class="row" style="gap:10px;margin-top:10px"><div style="flex:1"><label>Pincode</label><input id="pfv-pincode" value="${escapeHtml(PROFILE.pincode||'')}"></div><div style="flex:1"><label>City</label><input id="pfv-city" value="${escapeHtml(PROFILE.city||'')}"></div></div>
+      <div class="row" style="gap:10px;margin-top:10px"><div style="flex:1"><label>Pincode</label><input id="pfv-pincode" value="${escapeHtml(PROFILE.pincode||'')}"></div><div style="flex:1"><label>City</label><input id="pfv-city" value="${escapeHtml(PROFILE.city||USER_CITY||'')}"></div></div>
       <div class="row" style="gap:10px;margin-top:10px"><div style="flex:1"><label>State</label><input id="pfv-state" value="${escapeHtml(PROFILE.state||'')}"></div><div style="flex:1"><label>District</label><input id="pfv-district" value="${escapeHtml(PROFILE.district||'')}"></div></div>
       <label style="margin-top:10px">Landmark</label><input id="pfv-landmark" value="${escapeHtml(PROFILE.landmark||'')}">
       <label style="margin-top:10px">Address</label><input id="pfv-address" value="${escapeHtml(PROFILE.address||'')}">
@@ -825,10 +949,48 @@ function OrdersListView(){
 function OrderDetailView(orderId){
   const o=ORDERS.find(x=>x.orderId===orderId);if(!o){OrdersListView();return}
   setTopbar("Order Detail",true);setActiveTab("");
+  
+  const isDelivered = o.deliveryStatus === 'Delivered' || o.status === 'Delivered';
+  const isCancelled = o.status.includes('Cancelled');
+  let timerHtml = '';
+  
+  if (!isDelivered && !isCancelled) {
+      timerHtml = `<div class="card pad" style="margin-bottom:12px; text-align:center; background:#FFF8E1; border-color:#FFE082;">
+          <h4 style="margin:0; color:#F57C00; font-family:Poppins;"><i class="fa-solid fa-stopwatch"></i> Estimated Delivery</h4>
+          <div id="order-timer-${orderId}" style="font-size:32px; font-weight:bold; color:#E65100; margin-top:8px;">--:--</div>
+          <div style="font-size:12px; color:#F57C00; margin-top:4px;">We are preparing your food!</div>
+      </div>`;
+      
+      // Timer Logic
+      setTimeout(() => {
+          const timerEl = document.getElementById(`order-timer-${orderId}`);
+          if(!timerEl) return;
+          const targetTime = o.createdAt + 30 * 60 * 1000; // 30 mins
+          const updateTimer = () => {
+              if(!document.getElementById(`order-timer-${orderId}`)) return clearInterval(intv);
+              const now = Date.now();
+              const diff = targetTime - now;
+              if(diff <= 0) {
+                  timerEl.textContent = "Almost there!";
+                  clearInterval(intv);
+              } else {
+                  const m = Math.floor(diff / 60000);
+                  const s = Math.floor((diff % 60000) / 1000);
+                  timerEl.textContent = `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')} Min`;
+              }
+          };
+          updateTimer(); // Initial call
+          const intv = setInterval(updateTimer, 1000);
+      }, 100);
+  }
+
   const delHtml=o.deliveryBoy?`<div class="card pad" style="margin-top:12px"><h4 style="margin:0 0 8px;font-family:Poppins;color:var(--accentDark)"><i class="fa-solid fa-motorcycle"></i> Delivery Partner</h4><div>${escapeHtml(o.deliveryBoy.name||'—')}</div><div class="muted">${escapeHtml(o.deliveryBoy.phone||'')}</div><div class="chip" style="margin-top:6px;background:var(--accentLight);color:var(--accentDark)">${escapeHtml(o.deliveryStatus||'Assigned')}</div></div>`:'';
-  $("#view").innerHTML=`<section style="padding:14px"><div class="card pad">
+  
+  $("#view").innerHTML=`<section style="padding:14px">
+    ${timerHtml}
+    <div class="card pad">
     <div class="row"><div><strong style="color:var(--accentDark)">Order</strong> #${escapeHtml(o.orderId)}</div><div class="muted">${new Date(o.createdAt).toLocaleString()}</div></div><div class="sep"></div>
-    ${o.items.map(it=>`<div class="row"><div>${escapeHtml(it.name)} <span class="muted">x${it.qty}</span></div><div style="color:var(--accentDark)">${money((it.price||0)*it.qty+(it.shipping||50))}</div></div>`).join("")}
+    ${o.items.map(it=>`<div class="row"><div>${escapeHtml(it.name)} <span class="muted">x${it.qty}</span></div><div style="color:var(--accentDark)">${money((it.price||0)*it.qty+(typeof it.shipping === 'number' ? it.shipping : 50))}</div></div>`).join("")}
     <div class="sep"></div>
     <div class="row"><strong>Total</strong><strong style="color:var(--accentDark)">${money(o.amount)}</strong></div>
     <div class="chip" style="margin-top:8px;background:var(--accentLight);color:var(--accentDark)">${escapeHtml(o.status)}</div>
@@ -842,11 +1004,11 @@ function popConfetti(){const c=$("#confetti");if(!c)return;c.innerHTML="";const 
 function playSuccessSound(){try{const ctx=new(window.AudioContext||window.webkitAudioContext)();const o=ctx.createOscillator(),g=ctx.createGain();o.type="triangle";o.frequency.setValueAtTime(660,ctx.currentTime);g.gain.setValueAtTime(.001,ctx.currentTime);g.gain.exponentialRampToValueAtTime(.3,ctx.currentTime+.02);g.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+.4);o.connect(g).connect(ctx.destination);o.start();o.stop(ctx.currentTime+.42);setTimeout(()=>ctx.close(),600)}catch(e){}}
 
 const chatbotToggle=$("#chatbot-toggle"),chatbotPopup=$("#chatbot-popup"),chatbotClose=$("#chatbot-close"),chatbotBody=$("#chatbot-body"),chatbotQuestions=$("#chatbot-questions");
-const FAQ_DATA=[{q:"How can I place an order?",a:"Browse our menu, add items to cart, and checkout."},{q:"What are your payment options?",a:"We accept Cash on Delivery and Online Payment via UPI."},{q:"How to become a delivery partner?",a:"Visit 'Join Our Team' from Home or Account section."},{q:"How to contact support?",a:"Email us at sahpaufoodstore@gmail.com or visit Contact Support page."}];
+const FAQ_DATA=[{q:"How can I place an order?",a:"Browse our menu, add items to cart, and checkout."},{q:"What are your payment options?",a:"We accept Cash on Delivery and Online Payment via UPI."},{q:"How to become a delivery partner?",a:"Visit 'Join Our Team' from Home or Account section."},{q:"How to contact support?",a:"Email us at sahpaufoodstore@gmail.com or call us at +91 96342 58114."}];
 function renderChatbotQ(){chatbotQuestions.innerHTML=FAQ_DATA.map((f,i)=>`<button class="question-chip" data-qi="${i}">${escapeHtml(f.q)}</button>`).join('');$$('.question-chip').forEach(b=>b.addEventListener('click',handleQClick))}
 function handleQClick(e){const b=e.target.closest('.question-chip');if(!b)return;const i=parseInt(b.dataset.qi);addMsg(FAQ_DATA[i].q,true);chatbotQuestions.innerHTML='';const t=addMsg('Typing...',false,'typing');setTimeout(()=>{if(t)t.remove();addMsg(FAQ_DATA[i].a,false)},1200)}
 function addMsg(text,isUser=false,cls=''){const c=document.createElement('div');c.className=`chatbot-msg-container ${isUser?'user-msg':'bot-msg'}`;const m=document.createElement('div');m.className=`chatbot-msg ${!isUser?'bot':''} ${cls}`;m.textContent=text;c.appendChild(m);chatbotBody.appendChild(c);chatbotBody.scrollTop=chatbotBody.scrollHeight;return cls==='typing'?m:null}
-chatbotToggle.addEventListener('click',()=>{chatbotPopup.classList.toggle('visible');if(chatbotPopup.classList.contains('visible')){chatbotBody.innerHTML='';addMsg("Hello! I'm Saphau AI. Select a question:",false);renderChatbotQ()}});
+chatbotToggle.addEventListener('click',()=>{chatbotPopup.classList.toggle('visible');if(chatbotPopup.classList.contains('visible')){chatbotBody.innerHTML='';addMsg("Hello! I'm Zesto AI. Select a question:",false);renderChatbotQ()}});
 chatbotClose.addEventListener('click',()=>{chatbotPopup.classList.remove('visible');chatbotBody.innerHTML=''});
 
 function render(){
@@ -877,7 +1039,7 @@ function render(){
   else if(r==="delivery"&&id==="my-orders")DeliveryMyOrdersView();
   else ShopView();
 }
-(function init(){render()})();
+(function init(){ checkCitySelection(); checkAndRender(); })();
 </script>
 </body>
 </html>
