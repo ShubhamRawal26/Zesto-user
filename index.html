@@ -261,14 +261,12 @@ let ALLOWED_CITIES = ['Jaipur', 'Delhi', 'Mumbai']; // Fallback cities
 
 const getPrice = (p) => {
     if(!p) return 0;
-    // Check if city-specific price exists for the chosen city
     if(USER_CITY && p.cityPrices && p.cityPrices[USER_CITY]){
         return Number(p.cityPrices[USER_CITY]);
     }
     return Number(p.price || 0);
 };
 
-// Fixes the delivery charge `0` bug by strictly checking typeof
 const getShipping = (p) => p ? (typeof p.shipping === 'number' ? p.shipping : 50) : 50;
 
 const cartTotal=()=>CART.reduce((a,c)=>{const p=PRODUCTS.find(x=>x.id===c.productId);return a+(p?(getPrice(p)*c.qty+getShipping(p)):0)},0);
@@ -303,7 +301,7 @@ function checkCitySelection() {
 window.selectCity = (c) => { 
     localStorage.setItem('zesto_city', c); 
     USER_CITY = c; 
-    PROFILE.city = c; // optionally update profile
+    PROFILE.city = c;
     saveProfile();
     checkCitySelection(); 
     render(); 
@@ -323,7 +321,7 @@ ratingsRef.on('value',snap=>{RATINGS=snap.val()?Object.values(snap.val()):[];dat
 appConfigRef.on('value',snap=>{
     const c=snap.val()||{};
     HERO_IMAGE_URL=c.heroImage||"";BANNER_TEXT=c.bannerText||"";APP_LOGO_URL=c.appLogo||"";
-    if(c.allowedCities) ALLOWED_CITIES = c.allowedCities.split(',').map(s=>s.trim()); // Parse admin cities
+    if(c.allowedCities) ALLOWED_CITIES = c.allowedCities.split(',').map(s=>s.trim());
     
     if(BANNER_TEXT){$("#animated-banner-text").textContent=BANNER_TEXT;$("#animated-banner-wrap").style.display="block"}else{$("#animated-banner-wrap").style.display="none"}
     if(APP_LOGO_URL){$("#app-logo").src=APP_LOGO_URL;$("#app-logo").style.display="block"}else{$("#app-logo").style.display="none"}
@@ -585,14 +583,14 @@ function CheckoutView(){
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div><label>State</label><input id="ch-state"></div><div><label>District</label><input id="ch-district"></div></div>
         <label>Landmark</label><input id="ch-landmark">
         <h3 style="margin:16px 0 8px;font-family:Poppins;color:var(--accentDark)"><i class="fa-solid fa-location-dot"></i> Delivery Location</h3>
-        <p class="muted" style="font-size:12px;margin:0 0 6px">Tap/click on the map or use GPS to set your exact delivery location</p>
+        <p class="muted" style="font-size:12px;margin:0 0 6px">Click/tap map or "Use GPS" to set your delivery point.</p>
         <div id="checkout-map" class="map-container"></div>
         <input id="ch-lat" type="hidden"><input id="ch-lng" type="hidden">
-        <div id="ch-loc-text" class="muted" style="font-size:12px;margin-top:6px"></div>
+        <div id="ch-loc-text" class="muted" style="font-size:12px;margin-top:6px">Location not set.</div>
         <button type="button" class="btn btn-outline" style="margin-top:8px;font-size:13px" id="ch-use-gps"><i class="fa-solid fa-crosshairs"></i> Use My Current Location</button>
       </div>
       <div class="card pad" style="margin-top:16px">
-<h3 style="margin:0 0 12px;font-family:Poppins;color:var(--accentDark)">Payment Method</h3>
+        <h3 style="margin:0 0 12px;font-family:Poppins;color:var(--accentDark)">Payment Method</h3>
         <div style="display:flex;flex-direction:column;gap:10px" id="payment-methods">
           <div class="payment-option selected" data-method="cod"><div class="radio-dot"></div><i class="fa-solid fa-money-bill-wave pay-icon"></i><div><div style="font-weight:700;color:#111">Cash on Delivery</div><div class="muted" style="font-size:12px">Pay when your order arrives</div></div></div>
           <div class="payment-option" data-method="online"><div class="radio-dot"></div><i class="fa-solid fa-credit-card pay-icon"></i><div><div style="font-weight:700;color:#111">Pay Online (UPI)</div><div class="muted" style="font-size:12px">Pay via UPI, Google Pay, PhonePe</div></div></div>
@@ -617,13 +615,27 @@ function CheckoutView(){
     let marker=null;
     function setMarker(lat,lng){if(marker)map.removeLayer(marker);marker=L.marker([lat,lng]).addTo(map);map.setView([lat,lng],15);$("#ch-lat").value=lat;$("#ch-lng").value=lng;$("#ch-loc-text").textContent=`Location: ${lat.toFixed(5)}, ${lng.toFixed(5)}`}
     map.on('click',e=>setMarker(e.latlng.lat,e.latlng.lng));
+    setTimeout(() => map.invalidateSize(), 300);
+
+    const useGps = () => {
+      if(!navigator.geolocation) return toast("Geolocation not supported.");
+      toast("Finding your location...");
+      navigator.geolocation.getCurrentPosition(
+        pos => { setMarker(pos.coords.latitude, pos.coords.longitude); toast("Location found!"); },
+        err => { 
+          let m = "Permission denied.";
+          if(err.code === 2) m = "Position unavailable.";
+          if(err.code === 3) m = "Request timed out.";
+          toast("Error: " + m);
+        },
+        { enableHighAccuracy: true, timeout: 8000 }
+      );
+    };
     
-    // Auto prompt location on load
-    if(navigator.geolocation){
-        navigator.geolocation.getCurrentPosition(pos=>setMarker(pos.coords.latitude,pos.coords.longitude), err => console.log("Location permission delayed/denied."));
-    }
-    $("#ch-use-gps").addEventListener("click",()=>{if(navigator.geolocation){navigator.geolocation.getCurrentPosition(pos=>setMarker(pos.coords.latitude,pos.coords.longitude),()=>alert("Could not get location. Please allow permissions."))}else alert("Geolocation not supported.")});
-  },100);
+    $("#ch-use-gps").addEventListener("click", useGps);
+    // Silent auto-try on load
+    if(navigator.geolocation) navigator.geolocation.getCurrentPosition(p=>setMarker(p.coords.latitude, p.coords.longitude), null, {enableHighAccuracy:true, timeout:5000});
+  },200);
   
   let payMethod="cod";
   $$("#payment-methods .payment-option").forEach(opt=>opt.addEventListener("click",()=>{$$("#payment-methods .payment-option").forEach(o=>o.classList.remove("selected"));opt.classList.add("selected");payMethod=opt.dataset.method}));
@@ -737,7 +749,6 @@ function DeliveryDashboardView(){
   const pickedCount=myOrders.filter(o=>o.deliveryStatus==='Picked Up').length;
   const deliveredCount=myOrders.filter(o=>o.deliveryStatus==='Delivered').length;
   
-  // Calculate Wallet Balance (Sum of shipping charges of delivered orders as points/money)
   const myDelivered=myOrders.filter(o=>o.deliveryStatus==='Delivered');
   const walletBalance=myDelivered.reduce((sum, o) => {
        const shippingTotal = o.items ? o.items.reduce((s, it) => s + (typeof it.shipping === 'number' ? it.shipping : 50), 0) : 50;
@@ -747,8 +758,6 @@ function DeliveryDashboardView(){
   $("#view").innerHTML=`
     <section style="padding:14px">
       <div class="notif-banner"><i class="fa-solid fa-circle-check" style="color:var(--success)"></i><div><strong>Active Delivery Partner</strong> — Zone: ${escapeHtml(app.deliveryFrom||'')} to ${escapeHtml(app.deliveryTo||'')}</div></div>
-      
-      <!-- Digital Wallet Card -->
       <div class="card pad" style="margin-bottom:16px; background: linear-gradient(135deg, #18A957 0%, #0d7a3d 100%); color:white;">
           <div style="font-size:14px; opacity:0.9;">Digital Wallet Balance (Earnings)</div>
           <div style="font-size:32px; font-weight:bold; font-family:Poppins; margin-top:4px; display:flex; align-items:center; gap:8px;">
@@ -756,7 +765,6 @@ function DeliveryDashboardView(){
           </div>
           <div style="font-size:12px; margin-top:8px; opacity:0.8;">Earned from ${myDelivered.length} completed deliveries</div>
       </div>
-
       <div class="del-stat-grid">
         <div class="del-stat"><div class="num">${acceptedCount}</div><div class="lbl">Accepted</div></div>
         <div class="del-stat"><div class="num">${pickedCount}</div><div class="lbl">Picked Up</div></div>
@@ -866,7 +874,8 @@ function JoinTeamView(){
     const greenIcon=L.icon({iconUrl:'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png',shadowUrl:'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',iconSize:[25,41],iconAnchor:[12,41]});
     const redIcon=L.icon({iconUrl:'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',shadowUrl:'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',iconSize:[25,41],iconAnchor:[12,41]});
     map.on('click',e=>{if(clickCount===0){if(markers[0])map.removeLayer(markers[0]);markers[0]=L.marker([e.latlng.lat,e.latlng.lng],{icon:greenIcon}).addTo(map);$("#jt-from-lat").value=e.latlng.lat;$("#jt-from-lng").value=e.latlng.lng;$("#jt-map-info").textContent="FROM set. Now tap TO.";clickCount=1}else{if(markers[1])map.removeLayer(markers[1]);markers[1]=L.marker([e.latlng.lat,e.latlng.lng],{icon:redIcon}).addTo(map);$("#jt-to-lat").value=e.latlng.lat;$("#jt-to-lng").value=e.latlng.lng;$("#jt-map-info").textContent="Both set! Tap again to reset.";clickCount=0}});
-  },100);
+    setTimeout(() => map.invalidateSize(), 300);
+  },200);
   $("#join-team-form").addEventListener("submit",e=>{
     e.preventDefault();
     const name=$("#jt-name").value.trim();const phone=$("#jt-phone").value.trim();const email=$("#jt-email").value.trim();
@@ -961,11 +970,10 @@ function OrderDetailView(orderId){
           <div style="font-size:12px; color:#F57C00; margin-top:4px;">We are preparing your food!</div>
       </div>`;
       
-      // Timer Logic
       setTimeout(() => {
           const timerEl = document.getElementById(`order-timer-${orderId}`);
           if(!timerEl) return;
-          const targetTime = o.createdAt + 30 * 60 * 1000; // 30 mins
+          const targetTime = o.createdAt + 30 * 60 * 1000;
           const updateTimer = () => {
               if(!document.getElementById(`order-timer-${orderId}`)) return clearInterval(intv);
               const now = Date.now();
@@ -979,7 +987,7 @@ function OrderDetailView(orderId){
                   timerEl.textContent = `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')} Min`;
               }
           };
-          updateTimer(); // Initial call
+          updateTimer();
           const intv = setInterval(updateTimer, 1000);
       }, 100);
   }
