@@ -281,9 +281,9 @@ const deliveryAppsRef=db.ref('deliveryApplications');
 
 let dataFetched={products:false,orders:false,ratings:false,config:false};
 
-function showLoader(){$("#view").innerHTML=`<div class="loader"><div class="dot"></div><div class="dot"></div><div class="dot"></div><div style="color:var(--accent);font-weight:600">Loading...</div></div>`}
+// Updated showLoader to explicitly show the loading text and bounce animation correctly on start
+function showLoader(){$("#view").innerHTML=`<div class="loader" style="margin-top:40px;"><div class="dot"></div><div class="dot"></div><div class="dot"></div><div style="color:var(--accent);font-weight:600;margin-top:16px;">Loading Zesto...</div></div>`}
 
-// --- Modified Check & Render to fix the blank screen ---
 function checkCitySelection() {
     if (!USER_CITY) {
         $("#city-modal-overlay").style.display = "flex";
@@ -313,6 +313,9 @@ function checkAndRender(){
         if(checkCitySelection()){
             render();
         }
+    } else {
+        // Ensures the loader stays on screen until data is fetched, fixing the blank screen
+        showLoader();
     }
 }
 
@@ -621,24 +624,29 @@ function CheckoutView(){
     // Invalidate size to prevent map loading weirdly
     setTimeout(() => map.invalidateSize(), 300);
 
-    // Explicit high-accuracy GPS button
+    // Explicit high-accuracy GPS button (Removed silent prompt so this button doesn't get auto-blocked)
     $("#ch-use-gps").addEventListener("click",()=>{
         if(navigator.geolocation){
-            toast("Getting your location...");
+            toast("Requesting location permission...");
             navigator.geolocation.getCurrentPosition(
-                pos=>setMarker(pos.coords.latitude,pos.coords.longitude),
-                err=>alert("Could not get location. Please allow permissions or check device settings."),
-                {enableHighAccuracy: true, timeout: 10000}
+                pos=>{
+                    toast("Location found!");
+                    setMarker(pos.coords.latitude,pos.coords.longitude);
+                },
+                err=>{
+                    let errorMsg = "Could not get location.";
+                    if(err.code === 1) errorMsg = "Location Permission Denied! Please allow location access in your browser settings.";
+                    else if(err.code === 2) errorMsg = "Position Unavailable! Please turn on your device GPS/Location.";
+                    else if(err.code === 3) errorMsg = "Request Timed Out! Try again.";
+                    alert(errorMsg);
+                },
+                {enableHighAccuracy: true, timeout: 15000, maximumAge: 0}
             );
         } else {
-            alert("Geolocation not supported.");
+            alert("Geolocation not supported by this browser.");
         }
     });
-    
-    // Auto prompt location on load
-    if(navigator.geolocation){
-        navigator.geolocation.getCurrentPosition(pos=>setMarker(pos.coords.latitude,pos.coords.longitude), null, {enableHighAccuracy: true, timeout: 5000});
-    }
+
   },100);
   
   let payMethod="cod";
@@ -1057,7 +1065,9 @@ function render(){
   else if(r==="delivery"&&id==="my-orders")DeliveryMyOrdersView();
   else ShopView();
 }
-(function init(){ checkCitySelection(); checkAndRender(); })();
+
+// Initializing the app - Loader starts immediately to prevent blank screen
+(function init(){ showLoader(); checkCitySelection(); checkAndRender(); })();
 </script>
 </body>
 </html>
