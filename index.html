@@ -175,7 +175,7 @@ label{font-size:13px;color:#111;margin:10px 0 6px;display:block}
 .del-stat .num{font-size:24px;font-weight:700;font-family:Poppins;color:var(--accent)}
 .del-stat .lbl{font-size:11px;color:var(--muted);margin-top:2px}
 
-/* City Modal Overlay added for Zesto Requirement #2 */
+/* City Modal Overlay */
 #city-modal-overlay{
   position:fixed;inset:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(5px);
   z-index:9999;display:none;flex-direction:column;align-items:center;justify-content:center;padding:20px;
@@ -281,17 +281,21 @@ const deliveryAppsRef=db.ref('deliveryApplications');
 
 let dataFetched={products:false,orders:false,ratings:false,config:false};
 
-// Updated showLoader to explicitly show the loading text and bounce animation correctly on start
 function showLoader(){$("#view").innerHTML=`<div class="loader" style="margin-top:40px;"><div class="dot"></div><div class="dot"></div><div class="dot"></div><div style="color:var(--accent);font-weight:600;margin-top:16px;">Loading Zesto...</div></div>`}
+
+// Dedicated function to show and populate the city modal properly
+function showCityModal() {
+    $("#city-list").innerHTML = ALLOWED_CITIES.map(c => `
+        <div class="city-option" onclick="selectCity('${escapeHtml(c)}')">
+           <i class="fa-solid fa-map-pin" style="color:var(--accent)"></i> ${escapeHtml(c)}
+        </div>
+    `).join('');
+    $("#city-modal-overlay").style.display = "flex";
+}
 
 function checkCitySelection() {
     if (!USER_CITY) {
-        $("#city-modal-overlay").style.display = "flex";
-        $("#city-list").innerHTML = ALLOWED_CITIES.map(c => `
-            <div class="city-option" onclick="selectCity('${escapeHtml(c)}')">
-               <i class="fa-solid fa-map-pin" style="color:var(--accent)"></i> ${escapeHtml(c)}
-            </div>
-        `).join('');
+        showCityModal();
         return false;
     }
     $("#city-modal-overlay").style.display = "none";
@@ -308,13 +312,11 @@ window.selectCity = (c) => {
 };
 
 function checkAndRender(){
-    // Only require products and config to do an initial render, solving the blank screen bug if orders/ratings are empty
     if(dataFetched.products && dataFetched.config){
         if(checkCitySelection()){
             render();
         }
     } else {
-        // Ensures the loader stays on screen until data is fetched, fixing the blank screen
         showLoader();
     }
 }
@@ -330,7 +332,13 @@ appConfigRef.on('value',snap=>{
     if(BANNER_TEXT){$("#animated-banner-text").textContent=BANNER_TEXT;$("#animated-banner-wrap").style.display="block"}else{$("#animated-banner-wrap").style.display="none"}
     if(APP_LOGO_URL){$("#app-logo").src=APP_LOGO_URL;$("#app-logo").style.display="block"}else{$("#app-logo").style.display="none"}
     dataFetched.config=true;checkAndRender()});
-deliveryAppsRef.on('value',snap=>{DELIVERY_APPS=snap.val()?Object.values(snap.val()):[];DELIVERY_APPS.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));updateTabbar();if(dataFetched.products && USER_CITY)render()});
+    
+deliveryAppsRef.on('value',snap=>{
+    DELIVERY_APPS=snap.val()?Object.values(snap.val()):[];
+    DELIVERY_APPS.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+    updateTabbar();
+    if(dataFetched.products && USER_CITY) render();
+});
 
 function parseRoute(){const h=location.hash.replace(/^#/,"")||"shop";return{parts:h.split("?")[0].split("/").filter(Boolean)}}
 function setTopbar(title,showBack){$("#page-title").textContent=title;$("#back-btn").style.display=showBack?"inline-grid":"none"}
@@ -344,8 +352,8 @@ function renderStarIcons(rating,max=5){let h='';for(let i=1;i<=max;i++)h+=i<=rat
 function getProductRating(pid){const r=RATINGS.filter(x=>x.productId===pid);if(!r.length)return 0;return(r.reduce((s,x)=>s+x.rating,0)/r.length).toFixed(1)}
 
 function getDeliveryApprovalStatus(){
-  if(!PROFILE.email)return null;
-  return DELIVERY_APPS.find(a=>a.email&&a.email.toLowerCase()===PROFILE.email.toLowerCase());
+  if(!PROFILE.email) return null;
+  return DELIVERY_APPS.find(a=>a.email && a.email.toLowerCase() === PROFILE.email.toLowerCase());
 }
 function isApprovedDeliveryBoy(){
   const app=getDeliveryApprovalStatus();
@@ -395,11 +403,14 @@ function HomeView(){
       </div>
       <h3 style="margin:16px 4px 8px;font-family:Poppins;color:var(--accentDark)">Featured in ${escapeHtml(USER_CITY)}</h3>
       <div class="grid" id="home-grid"></div>
+      
+      ${!app ? `
       <div class="join-banner">
         <h3><i class="fa-solid fa-motorcycle"></i> Become a Delivery Partner</h3>
         <p>Earn money on your schedule. Join our delivery team today!</p>
         <button class="btn" style="background:#fff;color:var(--accentDark)" onclick="routeTo('#/join-team')">Join Our Team</button>
-      </div>
+      </div>` : ''}
+
       <div class="support-footer"><a href="#/contact-support"><i class="fa-solid fa-headset"></i> Need Help? Contact Support</a></div>
     </section>`;
   const grid=$("#home-grid");
@@ -614,17 +625,17 @@ function CheckoutView(){
   $("#ch-state").value=PROFILE.state||"";$("#ch-district").value=PROFILE.district||"";$("#ch-landmark").value=PROFILE.landmark||"";
   
   setTimeout(()=>{
+    const mapEl = document.getElementById('checkout-map');
+    if(mapEl && mapEl._leaflet_id) { mapEl._leaflet_id = null; }
+    
     const map=L.map('checkout-map').setView([20.5937,78.9629],5);
-    // Updated to CartoDB tiles to prevent access blocking issue
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{attribution:'&copy; CartoDB'}).addTo(map);
     let marker=null;
     function setMarker(lat,lng){if(marker)map.removeLayer(marker);marker=L.marker([lat,lng]).addTo(map);map.setView([lat,lng],15);$("#ch-lat").value=lat;$("#ch-lng").value=lng;$("#ch-loc-text").textContent=`Location: ${lat.toFixed(5)}, ${lng.toFixed(5)}`}
     map.on('click',e=>setMarker(e.latlng.lat,e.latlng.lng));
     
-    // Invalidate size to prevent map loading weirdly
     setTimeout(() => map.invalidateSize(), 300);
 
-    // Explicit high-accuracy GPS button (Removed silent prompt so this button doesn't get auto-blocked)
     $("#ch-use-gps").addEventListener("click",()=>{
         if(navigator.geolocation){
             toast("Requesting location permission...");
@@ -635,15 +646,15 @@ function CheckoutView(){
                 },
                 err=>{
                     let errorMsg = "Could not get location.";
-                    if(err.code === 1) errorMsg = "Location Permission Denied! Please allow location access in your browser settings.";
-                    else if(err.code === 2) errorMsg = "Position Unavailable! Please turn on your device GPS/Location.";
+                    if(err.code === 1) errorMsg = "Location Permission Denied! Please go to your browser settings (Site Settings > Location) and allow access for this site.";
+                    else if(err.code === 2) errorMsg = "Position Unavailable! Please turn on your device GPS/Location and try again.";
                     else if(err.code === 3) errorMsg = "Request Timed Out! Try again.";
                     alert(errorMsg);
                 },
-                {enableHighAccuracy: true, timeout: 15000, maximumAge: 0}
+                {enableHighAccuracy: true, maximumAge: 0} 
             );
         } else {
-            alert("Geolocation not supported by this browser.");
+            alert("Geolocation is not supported by your browser.");
         }
     });
 
@@ -884,8 +895,10 @@ function JoinTeamView(){
     </div></section>`;
   if(PROFILE.email)$("#jt-email").value=PROFILE.email;if(PROFILE.name)$("#jt-name").value=PROFILE.name;if(PROFILE.phone)$("#jt-phone").value=PROFILE.phone;
   setTimeout(()=>{
+    const mapEl = document.getElementById('jt-map');
+    if(mapEl && mapEl._leaflet_id) { mapEl._leaflet_id = null; }
+    
     const map=L.map('jt-map').setView([20.5937,78.9629],5);
-    // Updated to CartoDB tiles to prevent access blocking issue
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{attribution:'&copy; CartoDB'}).addTo(map);
     let markers=[];let clickCount=0;
     const greenIcon=L.icon({iconUrl:'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png',shadowUrl:'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',iconSize:[25,41],iconAnchor:[12,41]});
@@ -899,12 +912,24 @@ function JoinTeamView(){
     const address=$("#jt-address").value.trim();const vehicle=$("#jt-vehicle").value;
     const deliveryFrom=$("#jt-from").value.trim();const deliveryTo=$("#jt-to").value.trim();
     if(!name||!phone||!email||!address||!vehicle||!deliveryFrom||!deliveryTo){alert("Please fill all required fields.");return}
+    
+    // VERY IMPORTANT: Sync the profile email so the app recognizes them when approved!
+    if(!PROFILE.email || PROFILE.email.toLowerCase() !== email.toLowerCase()) {
+        PROFILE.name = name;
+        PROFILE.email = email;
+        PROFILE.phone = phone;
+        saveProfile();
+    }
+
     const appKey=db.ref('deliveryApplications').push().key;
     const appData={firebaseKey:appKey,name,phone,email,dob:$("#jt-dob").value,address,city:$("#jt-city").value.trim(),pincode:$("#jt-pincode").value.trim(),vehicle,license:$("#jt-license").value.trim(),experience:$("#jt-experience").value.trim(),availability:$("#jt-availability").value,deliveryFrom,deliveryTo,
       fromCoords:$("#jt-from-lat").value?{lat:Number($("#jt-from-lat").value),lng:Number($("#jt-from-lng").value)}:null,
       toCoords:$("#jt-to-lat").value?{lat:Number($("#jt-to-lat").value),lng:Number($("#jt-to-lng").value)}:null,
       status:"Pending",createdAt:Date.now()};
-    db.ref('deliveryApplications/'+appKey).set(appData).then(()=>routeTo("#/join-team/success")).catch(()=>alert("Failed."));
+    db.ref('deliveryApplications/'+appKey).set(appData).then(()=>{
+        updateTabbar();
+        routeTo("#/join-team/success");
+    }).catch(()=>alert("Failed."));
   });
 }
 function JoinTeamSuccessView(){
@@ -937,7 +962,7 @@ function AccountView(){
         <a href="#/profile" class="row" style="padding:10px 0"><div><i class="fa-regular fa-user" style="color:var(--accent)"></i> Edit Profile</div><i class="fa-solid fa-chevron-right"></i></a><div class="sep"></div>
         <a href="#/account/orders" class="row" style="padding:10px 0"><div><i class="fa-regular fa-clipboard" style="color:var(--accent)"></i> Order History</div><i class="fa-solid fa-chevron-right"></i></a><div class="sep"></div>
         <a href="#/favorites" class="row" style="padding:10px 0"><div><i class="fa-regular fa-heart" style="color:var(--accent)"></i> My Favorites</div><i class="fa-solid fa-chevron-right"></i></a><div class="sep"></div>
-        <div class="row" style="padding:10px 0; cursor:pointer;" onclick="$('#city-modal-overlay').style.display='flex'"><div><i class="fa-solid fa-location-dot" style="color:var(--accent)"></i> Change City</div><i class="fa-solid fa-chevron-right"></i></div><div class="sep"></div>
+        <div class="row" style="padding:10px 0; cursor:pointer;" onclick="showCityModal()"><div><i class="fa-solid fa-location-dot" style="color:var(--accent)"></i> Change City</div><i class="fa-solid fa-chevron-right"></i></div><div class="sep"></div>
         <a href="#/join-team" class="row" style="padding:10px 0"><div><i class="fa-solid fa-motorcycle" style="color:var(--accent)"></i> Delivery Partner</div><i class="fa-solid fa-chevron-right"></i></a><div class="sep"></div>
         <a href="#/contact-support" class="row" style="padding:10px 0"><div><i class="fa-solid fa-headset" style="color:var(--accent)"></i> Contact Support</div><i class="fa-solid fa-chevron-right"></i></a>
       </div>
