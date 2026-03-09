@@ -183,6 +183,14 @@ label{font-size:13px;color:#111;margin:10px 0 6px;display:block}
 .city-modal-box{background:#fff;width:100%;max-width:400px;border-radius:24px;padding:24px;text-align:center;box-shadow:0 20px 40px rgba(0,0,0,0.2)}
 .city-option{display:flex;align-items:center;justify-content:center;gap:10px;padding:14px;border:1px solid var(--line);border-radius:14px;margin-bottom:10px;cursor:pointer;transition:all 0.2s;font-weight:600;}
 .city-option:hover{border-color:var(--accent);background:var(--accentLight);}
+
+/* Delivery Dashboard Earning Boxes */
+.earning-box{background:var(--accentLight);border:1px solid var(--accent);border-radius:10px;padding:12px;text-align:center;}
+.earning-box .amt{font-size:22px;font-weight:bold;color:var(--accentDark);font-family:Poppins}
+.earning-box .lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px}
+
+/* Store Lock Banner */
+.lock-banner{background:#FEE2E2; color:#E11D48; padding:12px; text-align:center; font-weight:bold; border-bottom:1px solid #FECACA;}
 </style>
 </head>
 <body>
@@ -257,15 +265,30 @@ const saveCart=()=>writeLocal("sf_cart",CART);
 // --- City & Pricing Logic Variables ---
 let USER_CITY = localStorage.getItem('zesto_city');
 let ALLOWED_CITIES = ['Jaipur', 'Delhi', 'Mumbai'];
+let CONFIG = {};
 
+// Match exact City Pricing structure as defined in the new Admin App update
 const getPrice = (p) => {
     if(!p) return 0;
-    if(USER_CITY && p.cityPrices && p.cityPrices[USER_CITY]){
-        return Number(p.cityPrices[USER_CITY]);
+    if(USER_CITY && p.cityPricing && p.cityPricing[USER_CITY] && p.cityPricing[USER_CITY].price){
+        return Number(p.cityPricing[USER_CITY].price);
     }
     return Number(p.price || 0);
 };
-
+const getMrp = (p) => {
+    if(!p) return 0;
+    if(USER_CITY && p.cityPricing && p.cityPricing[USER_CITY] && p.cityPricing[USER_CITY].mrp){
+        return Number(p.cityPricing[USER_CITY].mrp);
+    }
+    return Number(p.priceMrp || 0);
+};
+const getDisc = (p) => {
+    if(!p) return 0;
+    if(USER_CITY && p.cityPricing && p.cityPricing[USER_CITY] && p.cityPricing[USER_CITY].disc){
+        return Number(p.cityPricing[USER_CITY].disc);
+    }
+    return Number(p.discountPercent || 0);
+};
 const getShipping = (p) => p ? (typeof p.shipping === 'number' ? p.shipping : 50) : 50;
 
 const cartTotal=()=>CART.reduce((a,c)=>{const p=PRODUCTS.find(x=>x.id===c.productId);return a+(p?(getPrice(p)*c.qty+getShipping(p)):0)},0);
@@ -283,7 +306,6 @@ let dataFetched={products:false,orders:false,ratings:false,config:false};
 
 function showLoader(){$("#view").innerHTML=`<div class="loader" style="margin-top:40px;"><div class="dot"></div><div class="dot"></div><div class="dot"></div><div style="color:var(--accent);font-weight:600;margin-top:16px;">Loading Zesto...</div></div>`}
 
-// Dedicated function to show and populate the city modal properly
 function showCityModal() {
     $("#city-list").innerHTML = ALLOWED_CITIES.map(c => `
         <div class="city-option" onclick="selectCity('${escapeHtml(c)}')">
@@ -325,9 +347,9 @@ productsRef.on('value',snap=>{PRODUCTS=snap.val()?Object.values(snap.val()):[];P
 ordersRef.on('value',snap=>{ORDERS=snap.val()?Object.values(snap.val()):[];ORDERS.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));dataFetched.orders=true;checkAndRender()});
 ratingsRef.on('value',snap=>{RATINGS=snap.val()?Object.values(snap.val()):[];dataFetched.ratings=true;checkAndRender()});
 appConfigRef.on('value',snap=>{
-    const c=snap.val()||{};
-    HERO_IMAGE_URL=c.heroImage||"";BANNER_TEXT=c.bannerText||"";APP_LOGO_URL=c.appLogo||"";
-    if(c.allowedCities) ALLOWED_CITIES = c.allowedCities.split(',').map(s=>s.trim());
+    CONFIG=snap.val()||{};
+    HERO_IMAGE_URL=CONFIG.heroImage||"";BANNER_TEXT=CONFIG.bannerText||"";APP_LOGO_URL=CONFIG.appLogo||"";
+    if(CONFIG.allowedCities) ALLOWED_CITIES = CONFIG.allowedCities.split(',').map(s=>s.trim());
     
     if(BANNER_TEXT){$("#animated-banner-text").textContent=BANNER_TEXT;$("#animated-banner-wrap").style.display="block"}else{$("#animated-banner-wrap").style.display="none"}
     if(APP_LOGO_URL){$("#app-logo").src=APP_LOGO_URL;$("#app-logo").style.display="block"}else{$("#app-logo").style.display="none"}
@@ -390,7 +412,11 @@ function HomeView(){
     else if(app.status==='Pending') notifHtml=`<div class="notif-banner warning"><i class="fa-solid fa-clock" style="color:#F59E0B"></i><div><strong>Application Pending</strong> — Your delivery partner application is under review.</div></div>`;
     else if(app.status==='Rejected') notifHtml=`<div class="notif-banner" style="background:#FEE2E2;border-color:#FECACA"><i class="fa-solid fa-circle-xmark" style="color:#E11D48"></i><div><strong>Application Rejected</strong> — Unfortunately your application was not approved.</div></div>`;
   }
+  
+  const lockBanner = CONFIG.storeLocked ? `<div class="lock-banner"><i class="fa-solid fa-lock"></i> Store is currently closed. We are not accepting orders at this time.</div>` : '';
+
   $("#view").innerHTML=`
+    ${lockBanner}
     <section style="padding:14px">
       ${notifHtml}
       <div class="card" style="overflow:hidden">
@@ -422,7 +448,10 @@ function HomeView(){
 function ShopView(){
   setTopbar("Shop",false);setActiveTab("shop");
   const cats=[...new Set(PRODUCTS.map(p=>p.category).filter(Boolean))];
+  const lockBanner = CONFIG.storeLocked ? `<div class="lock-banner"><i class="fa-solid fa-lock"></i> Store is currently closed.</div>` : '';
+  
   $("#view").innerHTML=`
+    ${lockBanner}
     <section style="padding:14px">
       <div class="filters"><button class="chip active" data-filter="all">All</button>${cats.map(c=>`<button class="chip" data-filter="${escapeHtml(c)}">${escapeHtml(c)}</button>`).join("")}</div>
       <div class="card" style="padding:10px 12px;margin:8px 0 12px;display:flex;gap:10px;align-items:center">
@@ -444,12 +473,15 @@ function ShopView(){
 }
 
 function ProductCard(p){
-  const off=p.discountPercent?`<div class="discount-badge">${p.discountPercent}% OFF</div>`:"";
+  const disc = getDisc(p);
+  const mrp = getMrp(p);
+  const price = getPrice(p);
+  
+  const off=disc?`<div class="discount-badge">${disc}% OFF</div>`:"";
   const avg=getProductRating(p.id);
   const stars=avg>0?`<div class="star-rating">${avg} <i class="fa-solid fa-star"></i></div>`:'';
   const isFav=PROFILE.favorites.includes(p.id);
   const outOfStockOverlay = p.outOfStock ? `<div style="position:absolute; inset:0; background:rgba(255,255,255,0.6); backdrop-filter:grayscale(100%); display:flex; align-items:center; justify-content:center; z-index:10;"><span style="background:#E11D48; color:white; padding:6px 12px; border-radius:999px; font-weight:bold; font-size:12px; letter-spacing:1px;">OUT OF STOCK</span></div>` : '';
-  const price = getPrice(p);
   const shipping = getShipping(p);
   
   return`<a class="card p-card" href="#/product/${p.id}" data-open="${p.id}">
@@ -457,7 +489,7 @@ function ProductCard(p){
     <div class="p-img"><img src="${p.imageUrls[0]||""}" alt="${escapeHtml(p.name)}">${off}${outOfStockOverlay}</div>
     <div class="p-meta"><div class="p-title">${escapeHtml(p.name)}</div>
       <div style="display:flex;align-items:center;justify-content:space-between">
-        <div class="price-line"><div style="font-weight:700;color:var(--accentDark)">${money(price)}</div>${p.priceMrp?`<div class="strike">${money(p.priceMrp)}</div>`:""}</div>${stars}
+        <div class="price-line"><div style="font-weight:700;color:var(--accentDark)">${money(price)}</div>${mrp?`<div class="strike">${money(mrp)}</div>`:""}</div>${stars}
       </div>
       <div class="muted" style="font-size:12px">Shipping: ${shipping === 0 ? 'Free' : money(shipping)}</div>
     </div></a>`;
@@ -479,8 +511,11 @@ function ProductView(id){
   const pRatings=RATINGS.filter(r=>r.productId===id);
   const isOrdered=ORDERS.some(o=>o.customer&&o.customer.email===PROFILE.email&&o.items&&o.items.some(i=>i.productId===id));
   const isFav=PROFILE.favorites.includes(p.id);
-  const shipping=getShipping(p);
+  
+  const shipping = getShipping(p);
   const price = getPrice(p);
+  const mrp = getMrp(p);
+  const disc = getDisc(p);
   
   let reviewsHtml='';
   if(pRatings.length>0){
@@ -488,7 +523,10 @@ function ProductView(id){
       ${pRatings.map(r=>`<div class="review-card"><div style="display:flex;align-items:center;justify-content:space-between"><div class="review-author">${escapeHtml(r.userName||r.userEmail||'Anonymous')}</div><div class="review-stars">${renderStarIcons(r.rating)}</div></div>${r.reviewText?`<div class="review-text">${escapeHtml(r.reviewText)}</div>`:''}<div class="review-date">${r.createdAt?new Date(r.createdAt).toLocaleDateString():''}</div></div>`).join('')}</div>`;
   }
   
+  const lockBanner = CONFIG.storeLocked ? `<div class="lock-banner"><i class="fa-solid fa-lock"></i> Store is currently closed. Ordering is disabled.</div>` : '';
+
   $("#view").innerHTML=`
+    ${lockBanner}
     <section>
       <div class="hero-img" style="position:relative"><img src="${p.imageUrls[0]||""}" alt="${escapeHtml(p.name)}" style="${p.outOfStock ? 'filter:grayscale(100%)' : ''}">
         ${p.outOfStock ? `<div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center;"><span style="background:#E11D48; color:white; padding:10px 20px; border-radius:999px; font-weight:bold; font-size:18px; letter-spacing:1px; box-shadow:var(--shadow);">OUT OF STOCK</span></div>` : ''}
@@ -499,8 +537,8 @@ function ProductView(id){
             <h2 style="margin:0 0 6px;font-family:Poppins;color:var(--accentDark)">${escapeHtml(p.name)}</h2>
             <div class="price-line" style="margin:6px 0">
               <div style="font-family:Poppins;font-weight:700;font-size:22px;color:var(--accentDark)">${money(price)}</div>
-              ${p.priceMrp?`<div class="strike">${money(p.priceMrp)}</div>`:""}
-              ${p.discountPercent?`<span class="badge-off">${p.discountPercent}% OFF</span>`:""}
+              ${mrp?`<div class="strike">${money(mrp)}</div>`:""}
+              ${disc?`<span class="badge-off">${disc}% OFF</span>`:""}
             </div>
             ${avg>0?`<div class="star-rating">${avg} <i class="fa-solid fa-star"></i> (${pRatings.length} reviews)</div>`:''}
             <div class="muted" style="max-width:560px">${escapeHtml(p.description||"")}</div>
@@ -526,13 +564,22 @@ function ProductView(id){
   $("#qty-row").querySelectorAll(".size-btn").forEach(b=>b.addEventListener("click",()=>{$("#qty-row").querySelectorAll(".size-btn").forEach(x=>x.classList.remove("active"));b.classList.add("active");selectedQty=Number(b.dataset.qty)}));
   $("#product-like-btn").addEventListener("click",e=>{e.stopPropagation();toggleFavorite(p.id,$("#product-like-btn"))});
   
-  if (p.outOfStock) {
-      const btnBuy = $("#buy-now"); const btnAdd = $("#add-to-cart");
-      btnBuy.disabled = true; btnBuy.innerHTML = `<i class="fa-solid fa-ban"></i> Out of Stock`;
-      btnAdd.disabled = true; btnAdd.innerHTML = `<i class="fa-solid fa-ban"></i> Out of Stock`;
+  const isLocked = CONFIG.storeLocked;
+  const btnBuy = $("#buy-now"); const btnAdd = $("#add-to-cart");
+
+  if (p.outOfStock || isLocked) {
+      btnBuy.disabled = true;
+      btnAdd.disabled = true;
+      if (isLocked) {
+          btnBuy.innerHTML = `<i class="fa-solid fa-lock"></i> Store Closed`;
+          btnAdd.innerHTML = `<i class="fa-solid fa-lock"></i> Store Closed`;
+      } else {
+          btnBuy.innerHTML = `<i class="fa-solid fa-ban"></i> Out of Stock`;
+          btnAdd.innerHTML = `<i class="fa-solid fa-ban"></i> Out of Stock`;
+      }
   } else {
-      $("#buy-now").addEventListener("click",()=>{addToCart(p.id,"NA",selectedQty);if(ensureProfileBefore("#/cod/review")){const items=[{productId:p.id,name:p.name,price:getPrice(p),mrp:p.priceMrp,shipping:shipping,qty:selectedQty,size:"NA"}];const amount=price*selectedQty+shipping;const orderId="ZST-"+Date.now().toString().slice(-8);writeLocal("sf_pending",{orderId,items,customer:{...PROFILE},amount,status:"COD - Pending"});routeTo("#/cod/review")}});
-      $("#add-to-cart").addEventListener("click",()=>{addToCart(p.id,"NA",selectedQty);toast("Added to cart");routeTo("#/cart")});
+      btnBuy.addEventListener("click",()=>{addToCart(p.id,"NA",selectedQty);if(ensureProfileBefore("#/cod/review")){const items=[{productId:p.id,name:p.name,price:getPrice(p),mrp:getMrp(p),shipping:shipping,qty:selectedQty,size:"NA"}];const amount=price*selectedQty+shipping;const orderId="ZST-"+Date.now().toString().slice(-8);writeLocal("sf_pending",{orderId,items,customer:{...PROFILE},amount,status:"COD - Pending"});routeTo("#/cod/review")}});
+      btnAdd.addEventListener("click",()=>{addToCart(p.id,"NA",selectedQty);toast("Added to cart");routeTo("#/cart")});
   }
 
   const rateStars=$("#rate-stars");
@@ -558,24 +605,35 @@ function CartView(){
   const total=cartTotal();
   const shipT=CART.reduce((a,c)=>{const p=PRODUCTS.find(x=>x.id===c.productId);return a+(p?getShipping(p):0)},0);
   const sub=total-shipT;
+  
+  const isLocked = CONFIG.storeLocked;
+  const checkoutBtn = isLocked ? 
+      `<button class="btn btn-block" disabled style="background:#ccc;color:#666"><i class="fa-solid fa-lock"></i> Store Currently Closed</button>` : 
+      `<button class="btn btn-block" id="to-checkout"><i class="fa-solid fa-lock"></i> Proceed to Checkout</button>`;
+
   $("#view").innerHTML=`<section style="padding:14px">${CART.length===0?`<div class="card pad" style="text-align:center;padding:26px"><div style="font-size:48px;color:var(--accent);margin-bottom:12px"><i class="fa-solid fa-cart-shopping"></i></div><div class="muted">Your cart is empty.</div><div style="margin-top:10px"><a class="btn btn-outline" href="#/shop">Browse Products</a></div></div>`:`
+    ${isLocked ? `<div class="lock-banner" style="border-radius:10px; margin-bottom:12px;"><i class="fa-solid fa-lock"></i> Store is currently closed.</div>` : ''}
     <div class="cart-list" id="cart-list">${CART.map(r=>CartItem(r)).join("")}</div>
     <div class="card sticky-sheet" style="margin-top:16px">
       <div class="row"><div class="muted">Subtotal</div><div>${money(sub)}</div></div>
       <div class="row"><div class="muted">Shipping</div><div>${shipT === 0 ? 'Free' : money(shipT)}</div></div>
       <div class="sep"></div>
       <div class="row" style="font-weight:800;color:var(--accentDark)"><div>Total</div><div>${money(total)}</div></div>
-      <div style="margin-top:10px"><button class="btn btn-block" id="to-checkout"><i class="fa-solid fa-lock"></i> Proceed to Checkout</button></div>
+      <div style="margin-top:10px">${checkoutBtn}</div>
     </div>`}</section>`;
-  attachCartHandlers();
-  $("#to-checkout")?.addEventListener("click",()=>{if(ensureProfileBefore("#/checkout"))routeTo("#/checkout")});
+  
+  if(!isLocked) {
+      attachCartHandlers();
+      $("#to-checkout")?.addEventListener("click",()=>{if(ensureProfileBefore("#/checkout"))routeTo("#/checkout")});
+  }
 }
 function CartItem(it){
   const p=PRODUCTS.find(x=>x.id===it.productId);if(!p)return"";
   const pPrice = getPrice(p);
+  const mrp = getMrp(p);
   const pShipping = getShipping(p);
   const iT= pPrice*it.qty + pShipping;
-  return`<div class="cart-item" data-id="${it.productId}"><img src="${p.imageUrls[0]||""}" alt="${escapeHtml(p.name)}"><div><div style="font-weight:700">${escapeHtml(p.name)}</div><div class="price-line" style="margin-top:4px"><div style="font-weight:700;color:var(--accentDark)">${money(iT)}</div>${p.priceMrp?`<div class="strike">${money((p.priceMrp||0)*it.qty)}</div>`:""}</div><div class="qty"><button class="circle-btn" data-dec>-</button><div>${it.qty}</div><button class="circle-btn primary" data-inc>+</button><button class="circle-btn" data-rem><i class="fa-regular fa-trash-can"></i></button></div></div></div>`;
+  return`<div class="cart-item" data-id="${it.productId}"><img src="${p.imageUrls[0]||""}" alt="${escapeHtml(p.name)}"><div><div style="font-weight:700">${escapeHtml(p.name)}</div><div class="price-line" style="margin-top:4px"><div style="font-weight:700;color:var(--accentDark)">${money(iT)}</div>${mrp?`<div class="strike">${money(mrp*it.qty)}</div>`:""}</div><div class="qty"><button class="circle-btn" data-dec>-</button><div>${it.qty}</div><button class="circle-btn primary" data-inc>+</button><button class="circle-btn" data-rem><i class="fa-regular fa-trash-can"></i></button></div></div></div>`;
 }
 function attachCartHandlers(){$$("#cart-list .cart-item").forEach(item=>{const pid=item.dataset.id;item.querySelector("[data-inc]").addEventListener("click",()=>changeQty(pid,+1));item.querySelector("[data-dec]").addEventListener("click",()=>changeQty(pid,-1));item.querySelector("[data-rem]").addEventListener("click",()=>removeFromCart(pid))})}
 function addToCart(pid,size,qty){const idx=CART.findIndex(x=>x.productId===pid);if(idx>-1)CART[idx].qty+=qty;else CART.push({productId:pid,size,qty});saveCart()}
@@ -583,10 +641,25 @@ function changeQty(pid,d){const idx=CART.findIndex(x=>x.productId===pid);if(idx=
 function removeFromCart(pid){CART=CART.filter(x=>x.productId!==pid);saveCart();render()}
 
 function CheckoutView(){
-  if(CART.length===0){routeTo("#/cart");return}
+  if(CART.length===0 || CONFIG.storeLocked){routeTo("#/cart");return}
   setTopbar("Checkout",true);setActiveTab("");
   const total=cartTotal();const shipT=CART.reduce((a,c)=>{const p=PRODUCTS.find(x=>x.id===c.productId);return a+(p?getShipping(p):0)},0);const sub=total-shipT;
+  
+  // Strict Location Logic Overlay
+  const enforceGpsOverlay = `
+    <div id="gps-mandatory-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,0.85);backdrop-filter:blur(5px);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;">
+      <div class="card pad" style="max-width:350px;text-align:center;width:100%;">
+        <i class="fa-solid fa-location-crosshairs" style="font-size:48px;color:var(--accent);margin-bottom:12px;"></i>
+        <h2 style="margin:0 0 8px;font-family:Poppins;color:var(--accentDark)">Location Required</h2>
+        <p class="muted" style="margin:0 0 20px;font-size:13px">Please turn on your device location to place an order. We strictly need your exact location for delivery.</p>
+        <button class="btn btn-block" id="force-gps-btn"><i class="fa-solid fa-location-dot"></i> Turn On & Use My Location</button>
+        <button class="btn btn-outline btn-block" style="margin-top:10px" onclick="history.back()">Go Back</button>
+      </div>
+    </div>
+  `;
+
   $("#view").innerHTML=`
+    ${enforceGpsOverlay}
     <section style="padding:14px">
       <div class="card pad">
         <h3 style="margin:0 0 10px;font-family:Poppins;color:var(--accentDark)">Contact Information</h3>
@@ -597,15 +670,15 @@ function CheckoutView(){
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div><label>City</label><input id="ch-city" readonly style="background:#f0f0f0; color:#666;"></div><div><label>Pincode</label><input id="ch-pincode" required></div></div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div><label>State</label><input id="ch-state"></div><div><label>District</label><input id="ch-district"></div></div>
         <label>Landmark</label><input id="ch-landmark">
+        
         <h3 style="margin:16px 0 8px;font-family:Poppins;color:var(--accentDark)"><i class="fa-solid fa-location-dot"></i> Delivery Location</h3>
-        <p class="muted" style="font-size:12px;margin:0 0 6px">Tap/click on the map or use GPS to set your exact delivery location</p>
+        <p class="muted" style="font-size:12px;margin:0 0 6px">Your verified location for delivery.</p>
         <div id="checkout-map" class="map-container"></div>
         <input id="ch-lat" type="hidden"><input id="ch-lng" type="hidden">
-        <div id="ch-loc-text" class="muted" style="font-size:12px;margin-top:6px"></div>
-        <button type="button" class="btn btn-outline" style="margin-top:8px;font-size:13px" id="ch-use-gps"><i class="fa-solid fa-crosshairs"></i> Use My Current Location</button>
+        <div id="ch-loc-text" class="muted" style="font-size:12px;margin-top:6px;color:var(--success);font-weight:bold;"></div>
       </div>
       <div class="card pad" style="margin-top:16px">
-<h3 style="margin:0 0 12px;font-family:Poppins;color:var(--accentDark)">Payment Method</h3>
+        <h3 style="margin:0 0 12px;font-family:Poppins;color:var(--accentDark)">Payment Method</h3>
         <div style="display:flex;flex-direction:column;gap:10px" id="payment-methods">
           <div class="payment-option selected" data-method="cod"><div class="radio-dot"></div><i class="fa-solid fa-money-bill-wave pay-icon"></i><div><div style="font-weight:700;color:#111">Cash on Delivery</div><div class="muted" style="font-size:12px">Pay when your order arrives</div></div></div>
           <div class="payment-option" data-method="online"><div class="radio-dot"></div><i class="fa-solid fa-credit-card pay-icon"></i><div><div style="font-weight:700;color:#111">Pay Online (UPI)</div><div class="muted" style="font-size:12px">Pay via UPI, Google Pay, PhonePe</div></div></div>
@@ -616,7 +689,7 @@ function CheckoutView(){
         <div class="row"><div class="muted">Shipping</div><div>${shipT === 0 ? 'Free' : money(shipT)}</div></div>
         <div class="sep"></div>
         <div class="row" style="font-weight:800;color:var(--accentDark)"><div>Total</div><div>${money(total)}</div></div>
-        <div style="margin-top:10px"><button class="btn btn-block" id="checkout-next"><i class="fa-solid fa-check"></i> Place Order</button></div>
+        <div style="margin-top:10px"><button class="btn btn-block" id="checkout-next" disabled style="opacity:0.5;cursor:not-allowed;"><i class="fa-solid fa-check"></i> Place Order</button></div>
       </div>
     </section>`;
     
@@ -631,24 +704,38 @@ function CheckoutView(){
     const map=L.map('checkout-map').setView([20.5937,78.9629],5);
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{attribution:'&copy; CartoDB'}).addTo(map);
     let marker=null;
-    function setMarker(lat,lng){if(marker)map.removeLayer(marker);marker=L.marker([lat,lng]).addTo(map);map.setView([lat,lng],15);$("#ch-lat").value=lat;$("#ch-lng").value=lng;$("#ch-loc-text").textContent=`Location: ${lat.toFixed(5)}, ${lng.toFixed(5)}`}
-    map.on('click',e=>setMarker(e.latlng.lat,e.latlng.lng));
+    
+    function setMarker(lat,lng){
+        if(marker)map.removeLayer(marker);
+        marker=L.marker([lat,lng]).addTo(map);
+        map.setView([lat,lng],15);
+        $("#ch-lat").value=lat;
+        $("#ch-lng").value=lng;
+        $("#ch-loc-text").textContent=`Verified Location: ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+        
+        // Unlock checkout button when location is successfully verified
+        $("#checkout-next").disabled = false;
+        $("#checkout-next").style.opacity = '1';
+        $("#checkout-next").style.cursor = 'pointer';
+    }
     
     setTimeout(() => map.invalidateSize(), 300);
 
-    $("#ch-use-gps").addEventListener("click",()=>{
+    // Force GPS Button Logic
+    $("#force-gps-btn").addEventListener("click",()=>{
         if(navigator.geolocation){
-            toast("Requesting location permission...");
+            toast("Requesting location...");
             navigator.geolocation.getCurrentPosition(
                 pos=>{
-                    toast("Location found!");
+                    toast("Location Verified!");
                     setMarker(pos.coords.latitude,pos.coords.longitude);
+                    $("#gps-mandatory-overlay").style.display = "none";
                 },
                 err=>{
                     let errorMsg = "Could not get location.";
-                    if(err.code === 1) errorMsg = "Location Permission Denied! Please go to your browser settings (Site Settings > Location) and allow access for this site.";
-                    else if(err.code === 2) errorMsg = "Position Unavailable! Please turn on your device GPS/Location and try again.";
-                    else if(err.code === 3) errorMsg = "Request Timed Out! Try again.";
+                    if(err.code === 1) errorMsg = "Location Permission Denied! Please allow location access in your device/browser settings.";
+                    else if(err.code === 2) errorMsg = "Position Unavailable! Please turn on your device GPS.";
+                    else if(err.code === 3) errorMsg = "Request Timed Out! Please try again.";
                     alert(errorMsg);
                 },
                 {enableHighAccuracy: true, maximumAge: 0} 
@@ -668,13 +755,16 @@ function CheckoutView(){
     PROFILE.state=$("#ch-state").value.trim();PROFILE.district=$("#ch-district").value.trim();PROFILE.landmark=$("#ch-landmark").value.trim();
     PROFILE.isComplete=hasCompleteProfile();if(!PROFILE.isComplete){alert("Please fill name, email, phone, address and pincode.");return}
     saveProfile();
+    
     const lat=$("#ch-lat").value;const lng=$("#ch-lng").value;
+    if(!lat || !lng) { alert("Location is missing. Please verify GPS again."); return; }
+
     const items=CART.map(it=>{
         const p=PRODUCTS.find(x=>x.id===it.productId);
-        return {productId:it.productId,name:p?.name,price:getPrice(p),mrp:p?.priceMrp,shipping:getShipping(p),qty:it.qty,size:"NA"}
+        return {productId:it.productId,name:p?.name,price:getPrice(p),mrp:getMrp(p),shipping:getShipping(p),qty:it.qty,size:"NA"}
     });
     const amount=cartTotal();const orderId="ZST-"+Date.now().toString().slice(-8);
-    const orderBase={orderId,items,customer:{...PROFILE},amount,deliveryLocation:lat&&lng?{lat:Number(lat),lng:Number(lng)}:null};
+    const orderBase={orderId,items,customer:{...PROFILE},amount,deliveryLocation:{lat:Number(lat),lng:Number(lng)}};
     if(payMethod==="online"){writeLocal("sf_pending",{...orderBase,status:"Online Payment - Pending",paymentMethod:"online"});routeTo("#/pay/online")}
     else{writeLocal("sf_pending",{...orderBase,status:"COD - Pending",paymentMethod:"cod"});routeTo("#/cod/review")}
   });
@@ -768,30 +858,41 @@ function DeliveryDashboardView(){
   if(!app||app.status!=='Approved'){routeTo("#/home");return}
   const myEmail=PROFILE.email.toLowerCase();
   const myOrders=ORDERS.filter(o=>o.deliveryBoy&&o.deliveryBoy.email&&o.deliveryBoy.email.toLowerCase()===myEmail);
+  
   const acceptedCount=myOrders.filter(o=>o.deliveryStatus==='Accepted').length;
   const pickedCount=myOrders.filter(o=>o.deliveryStatus==='Picked Up').length;
   const deliveredCount=myOrders.filter(o=>o.deliveryStatus==='Delivered').length;
   
-  // Digital Wallet Calculation
-  const myDelivered=myOrders.filter(o=>o.deliveryStatus==='Delivered');
-  const walletBalance=myDelivered.reduce((sum, o) => {
-       const shippingTotal = o.items ? o.items.reduce((s, it) => s + (typeof it.shipping === 'number' ? it.shipping : 50), 0) : 50;
-       return sum + shippingTotal; 
-  }, 0);
+  // Digital Wallet Calculation with Time Filters
+  const now = new Date();
+  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const startOfWeek = startOfDay - (now.getDay() * 86400000);
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+
+  let todayEarning = 0, weekEarning = 0, monthEarning = 0, totalEarning = 0;
+
+  myOrders.filter(o=>o.deliveryStatus==='Delivered').forEach(o => {
+      const payout = o.deliveryPayout !== undefined ? o.deliveryPayout : (o.items ? o.items.reduce((s, it) => s + (typeof it.shipping === 'number' ? it.shipping : 50), 0) : 50);
+      totalEarning += payout;
+      if (o.createdAt >= startOfDay) todayEarning += payout;
+      if (o.createdAt >= startOfWeek) weekEarning += payout;
+      if (o.createdAt >= startOfMonth) monthEarning += payout;
+  });
 
   $("#view").innerHTML=`
     <section style="padding:14px">
       <div class="notif-banner"><i class="fa-solid fa-circle-check" style="color:var(--success)"></i><div><strong>Active Delivery Partner</strong> — Zone: ${escapeHtml(app.deliveryFrom||'')} to ${escapeHtml(app.deliveryTo||'')}</div></div>
       
-      <!-- Digital Wallet Card -->
-      <div class="card pad" style="margin-bottom:16px; background: linear-gradient(135deg, #18A957 0%, #0d7a3d 100%); color:white;">
-          <div style="font-size:14px; opacity:0.9;">Digital Wallet Balance (Earnings)</div>
-          <div style="font-size:32px; font-weight:bold; font-family:Poppins; margin-top:4px; display:flex; align-items:center; gap:8px;">
-            ${money(walletBalance)} <i class="fa-solid fa-coins" style="font-size:24px; color:#FFD700;"></i>
-          </div>
-          <div style="font-size:12px; margin-top:8px; opacity:0.8;">Earned from ${myDelivered.length} completed deliveries</div>
+      <!-- Digital Wallet Filters -->
+      <h3 style="margin:16px 0 8px;font-family:Poppins;color:var(--accentDark)"><i class="fa-solid fa-wallet"></i> My Earnings</h3>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+        <div class="earning-box"><div class="amt">${money(todayEarning)}</div><div class="lbl">Today</div></div>
+        <div class="earning-box"><div class="amt">${money(weekEarning)}</div><div class="lbl">This Week</div></div>
+        <div class="earning-box"><div class="amt">${money(monthEarning)}</div><div class="lbl">This Month</div></div>
+        <div class="earning-box" style="background:#E6F7EE; border-color:var(--success);"><div class="amt" style="color:var(--success)">${money(totalEarning)}</div><div class="lbl">Total Wallet</div></div>
       </div>
 
+      <h3 style="margin:16px 0 8px;font-family:Poppins;color:var(--accentDark)"><i class="fa-solid fa-clipboard-check"></i> Delivery Stats</h3>
       <div class="del-stat-grid">
         <div class="del-stat"><div class="num">${acceptedCount}</div><div class="lbl">Accepted</div></div>
         <div class="del-stat"><div class="num">${pickedCount}</div><div class="lbl">Picked Up</div></div>
@@ -913,7 +1014,6 @@ function JoinTeamView(){
     const deliveryFrom=$("#jt-from").value.trim();const deliveryTo=$("#jt-to").value.trim();
     if(!name||!phone||!email||!address||!vehicle||!deliveryFrom||!deliveryTo){alert("Please fill all required fields.");return}
     
-    // VERY IMPORTANT: Sync the profile email so the app recognizes them when approved!
     if(!PROFILE.email || PROFILE.email.toLowerCase() !== email.toLowerCase()) {
         PROFILE.name = name;
         PROFILE.email = email;
@@ -972,17 +1072,17 @@ function ProfileEditView(isSetup=false){
   setTopbar("Account",true);setActiveTab("");
   $("#view").innerHTML=`<section style="padding:14px"><div class="profile-head"><div class="avatar"><img id="avatar-img" src="${PROFILE.avatar||'https://i.pravatar.cc/200?u=sf'}" alt="avatar"></div><label class="chip" style="cursor:pointer"><i class="fa-solid fa-camera" style="color:var(--accent)"></i> Change Photo<input type="file" id="avatar-file" accept="image/*" style="display:none"></label></div>
     <div class="card pad"><h3 style="margin:0 0 12px;font-family:Poppins;color:var(--accentDark)">Profile Information</h3>
-      <label>Name</label><input id="pfv-name" value="${escapeHtml(PROFILE.name||'')}">
-      <label>Email</label><input id="pfv-email" type="email" value="${escapeHtml(PROFILE.email||'')}">
-      <label>Phone</label><input id="pfv-phone" type="tel" value="${escapeHtml(PROFILE.phone||'')}">
-      <div class="row" style="gap:10px;margin-top:10px"><div style="flex:1"><label>Pincode</label><input id="pfv-pincode" value="${escapeHtml(PROFILE.pincode||'')}"></div><div style="flex:1"><label>City</label><input id="pfv-city" value="${escapeHtml(PROFILE.city||USER_CITY||'')}"></div></div>
-      <div class="row" style="gap:10px;margin-top:10px"><div style="flex:1"><label>State</label><input id="pfv-state" value="${escapeHtml(PROFILE.state||'')}"></div><div style="flex:1"><label>District</label><input id="pfv-district" value="${escapeHtml(PROFILE.district||'')}"></div></div>
-      <label style="margin-top:10px">Landmark</label><input id="pfv-landmark" value="${escapeHtml(PROFILE.landmark||'')}">
-      <label style="margin-top:10px">Address</label><input id="pfv-address" value="${escapeHtml(PROFILE.address||'')}">
-      <div style="margin-top:14px"><button class="btn btn-block" id="pfv-save">${isSetup?'Save & Continue':'Save Changes'}</button></div>
+      <label>Name</label><input id="pf-name" value="${escapeHtml(PROFILE.name||'')}">
+      <label>Email</label><input id="pf-email" type="email" value="${escapeHtml(PROFILE.email||'')}">
+      <label>Phone</label><input id="pf-phone" type="tel" value="${escapeHtml(PROFILE.phone||'')}">
+      <div class="row" style="gap:10px;margin-top:10px"><div style="flex:1"><label>Pincode</label><input id="pf-pincode" value="${escapeHtml(PROFILE.pincode||'')}"></div><div style="flex:1"><label>City</label><input id="pf-city" value="${escapeHtml(PROFILE.city||USER_CITY||'')}"></div></div>
+      <div class="row" style="gap:10px;margin-top:10px"><div style="flex:1"><label>State</label><input id="pf-state" value="${escapeHtml(PROFILE.state||'')}"></div><div style="flex:1"><label>District</label><input id="pf-district" value="${escapeHtml(PROFILE.district||'')}"></div></div>
+      <label style="margin-top:10px">Landmark</label><input id="pf-landmark" value="${escapeHtml(PROFILE.landmark||'')}">
+      <label style="margin-top:10px">Address</label><input id="pf-address" value="${escapeHtml(PROFILE.address||'')}">
+      <div style="margin-top:14px"><button class="btn btn-block" id="pf-save">${isSetup?'Save & Continue':'Save Changes'}</button></div>
     </div></section>`;
   $("#avatar-file").addEventListener("change",async e=>{const f=e.target.files?.[0];if(!f)return;const url=await compressToDataURL(f,400,400,.9);PROFILE.avatar=url;saveProfile();$("#avatar-img").src=url});
-  $("#pfv-save").addEventListener("click",()=>{PROFILE.name=$("#pfv-name").value.trim();PROFILE.email=$("#pfv-email").value.trim();PROFILE.phone=$("#pfv-phone").value.trim();PROFILE.pincode=$("#pfv-pincode").value.trim();PROFILE.city=$("#pfv-city").value.trim();PROFILE.state=$("#pfv-state").value.trim();PROFILE.district=$("#pfv-district").value.trim();PROFILE.landmark=$("#pfv-landmark").value.trim();PROFILE.address=$("#pfv-address").value.trim();PROFILE.isComplete=hasCompleteProfile();saveProfile();const next=readLocal("sf_next",null);localStorage.removeItem("sf_next");toast("Profile saved");if(isSetup&&next)routeTo(next);else{updateTabbar();routeTo("#/account")}});
+  $("#pf-save").addEventListener("click",()=>{PROFILE.name=$("#pf-name").value.trim();PROFILE.email=$("#pf-email").value.trim();PROFILE.phone=$("#pf-phone").value.trim();PROFILE.pincode=$("#pf-pincode").value.trim();PROFILE.city=$("#pf-city").value.trim();PROFILE.state=$("#pf-state").value.trim();PROFILE.district=$("#pf-district").value.trim();PROFILE.landmark=$("#pf-landmark").value.trim();PROFILE.address=$("#pf-address").value.trim();PROFILE.isComplete=hasCompleteProfile();saveProfile();const next=readLocal("sf_next",null);localStorage.removeItem("sf_next");toast("Profile saved");if(isSetup&&next)routeTo(next);else{updateTabbar();routeTo("#/account")}});
 }
 function FavoritesView(){
   setTopbar("My Favorites",true);setActiveTab("");
@@ -1005,7 +1105,6 @@ function OrderDetailView(orderId){
   const isCancelled = o.status.includes('Cancelled');
   let timerHtml = '';
   
-  // 30 MINUTE TIMER LOGIC ADDED HERE
   if (!isDelivered && !isCancelled) {
       timerHtml = `<div class="card pad" style="margin-bottom:12px; text-align:center; background:#FFF8E1; border-color:#FFE082;">
           <h4 style="margin:0; color:#F57C00; font-family:Poppins;"><i class="fa-solid fa-stopwatch"></i> Estimated Delivery</h4>
@@ -1091,7 +1190,6 @@ function render(){
   else ShopView();
 }
 
-// Initializing the app - Loader starts immediately to prevent blank screen
 (function init(){ showLoader(); checkCitySelection(); checkAndRender(); })();
 </script>
 </body>
