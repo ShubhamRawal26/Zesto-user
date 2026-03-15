@@ -267,7 +267,6 @@ let USER_CITY = localStorage.getItem('zesto_city');
 let ALLOWED_CITIES = ['Jaipur', 'Delhi', 'Mumbai'];
 let CONFIG = {};
 
-// Match exact City Pricing structure as defined in the new Admin App update
 const getPrice = (p) => {
     if(!p) return 0;
     if(USER_CITY && p.cityPricing && p.cityPricing[USER_CITY] && p.cityPricing[USER_CITY].price){
@@ -579,7 +578,7 @@ function ProductView(id){
       }
   } else {
       btnBuy.addEventListener("click",()=>{addToCart(p.id,"NA",selectedQty);if(ensureProfileBefore("#/cod/review")){const items=[{productId:p.id,name:p.name,price:getPrice(p),mrp:getMrp(p),shipping:shipping,qty:selectedQty,size:"NA"}];const amount=price*selectedQty+shipping;const orderId="ZST-"+Date.now().toString().slice(-8);writeLocal("sf_pending",{orderId,items,customer:{...PROFILE},amount,status:"COD - Pending"});routeTo("#/cod/review")}});
-      btnAdd.addEventListener("click",()=>{addToCart(p.id,"NA",selectedQty);toast("Added to cart");routeTo("#/cart")});
+      $("#add-to-cart").addEventListener("click",()=>{addToCart(p.id,"NA",selectedQty);toast("Added to cart");routeTo("#/cart")});
   }
 
   const rateStars=$("#rate-stars");
@@ -645,11 +644,13 @@ function CheckoutView(){
   setTopbar("Checkout",true);setActiveTab("");
   const total=cartTotal();const shipT=CART.reduce((a,c)=>{const p=PRODUCTS.find(x=>x.id===c.productId);return a+(p?getShipping(p):0)},0);const sub=total-shipT;
   
-  // Strict Location Logic Overlay
+  // Strict Location Logic Overlay (Ensures GPS is activated by user)
   const enforceGpsOverlay = `
     <div id="gps-mandatory-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,0.85);backdrop-filter:blur(5px);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;">
       <div class="card pad" style="max-width:350px;text-align:center;width:100%;">
-        <i class="fa-solid fa-location-crosshairs" style="font-size:48px;color:var(--accent);margin-bottom:12px;"></i>
+        <div style="width:72px;height:72px;background:var(--accentLight);border-radius:50%;display:grid;place-items:center;margin:0 auto 12px;">
+           <i class="fa-solid fa-location-crosshairs" style="font-size:32px;color:var(--accent);"></i>
+        </div>
         <h2 style="margin:0 0 8px;font-family:Poppins;color:var(--accentDark)">Location Required</h2>
         <p class="muted" style="margin:0 0 20px;font-size:13px">Please turn on your device location to place an order. We strictly need your exact location for delivery.</p>
         <button class="btn btn-block" id="force-gps-btn"><i class="fa-solid fa-location-dot"></i> Turn On & Use My Location</button>
@@ -672,13 +673,13 @@ function CheckoutView(){
         <label>Landmark</label><input id="ch-landmark">
         
         <h3 style="margin:16px 0 8px;font-family:Poppins;color:var(--accentDark)"><i class="fa-solid fa-location-dot"></i> Delivery Location</h3>
-        <p class="muted" style="font-size:12px;margin:0 0 6px">Your verified location for delivery.</p>
+        <p class="muted" style="font-size:12px;margin:0 0 6px">Your verified GPS location for delivery.</p>
         <div id="checkout-map" class="map-container"></div>
         <input id="ch-lat" type="hidden"><input id="ch-lng" type="hidden">
         <div id="ch-loc-text" class="muted" style="font-size:12px;margin-top:6px;color:var(--success);font-weight:bold;"></div>
       </div>
       <div class="card pad" style="margin-top:16px">
-        <h3 style="margin:0 0 12px;font-family:Poppins;color:var(--accentDark)">Payment Method</h3>
+<h3 style="margin:0 0 12px;font-family:Poppins;color:var(--accentDark)">Payment Method</h3>
         <div style="display:flex;flex-direction:column;gap:10px" id="payment-methods">
           <div class="payment-option selected" data-method="cod"><div class="radio-dot"></div><i class="fa-solid fa-money-bill-wave pay-icon"></i><div><div style="font-weight:700;color:#111">Cash on Delivery</div><div class="muted" style="font-size:12px">Pay when your order arrives</div></div></div>
           <div class="payment-option" data-method="online"><div class="radio-dot"></div><i class="fa-solid fa-credit-card pay-icon"></i><div><div style="font-weight:700;color:#111">Pay Online (UPI)</div><div class="muted" style="font-size:12px">Pay via UPI, Google Pay, PhonePe</div></div></div>
@@ -701,7 +702,11 @@ function CheckoutView(){
     const mapEl = document.getElementById('checkout-map');
     if(mapEl && mapEl._leaflet_id) { mapEl._leaflet_id = null; }
     
-    const map=L.map('checkout-map').setView([20.5937,78.9629],5);
+    // Map with dragging disabled, strictly GPS based
+    const map=L.map('checkout-map', {
+        zoomControl: false, dragging: false, scrollWheelZoom: false, doubleClickZoom: false
+    }).setView([20.5937,78.9629],5);
+    
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{attribution:'&copy; CartoDB'}).addTo(map);
     let marker=null;
     
@@ -721,10 +726,11 @@ function CheckoutView(){
     
     setTimeout(() => map.invalidateSize(), 300);
 
-    // Force GPS Button Logic
+    // Force GPS Button Logic (Popup approach)
     $("#force-gps-btn").addEventListener("click",()=>{
         if(navigator.geolocation){
-            toast("Requesting location...");
+            const btn = $("#force-gps-btn");
+            btn.innerHTML = "Fetching Location...";
             navigator.geolocation.getCurrentPosition(
                 pos=>{
                     toast("Location Verified!");
@@ -737,8 +743,9 @@ function CheckoutView(){
                     else if(err.code === 2) errorMsg = "Position Unavailable! Please turn on your device GPS.";
                     else if(err.code === 3) errorMsg = "Request Timed Out! Please try again.";
                     alert(errorMsg);
+                    btn.innerHTML = `<i class="fa-solid fa-location-dot"></i> Try Again`;
                 },
-                {enableHighAccuracy: true, maximumAge: 0} 
+                {enableHighAccuracy: true} 
             );
         } else {
             alert("Geolocation is not supported by your browser.");
@@ -757,14 +764,21 @@ function CheckoutView(){
     saveProfile();
     
     const lat=$("#ch-lat").value;const lng=$("#ch-lng").value;
-    if(!lat || !lng) { alert("Location is missing. Please verify GPS again."); return; }
+    if(!lat || !lng) { alert("Location is missing. Please refresh and allow GPS."); return; }
+
+    const basePayout = CONFIG.payout_0_2 || 20;
 
     const items=CART.map(it=>{
         const p=PRODUCTS.find(x=>x.id===it.productId);
         return {productId:it.productId,name:p?.name,price:getPrice(p),mrp:getMrp(p),shipping:getShipping(p),qty:it.qty,size:"NA"}
     });
     const amount=cartTotal();const orderId="ZST-"+Date.now().toString().slice(-8);
-    const orderBase={orderId,items,customer:{...PROFILE},amount,deliveryLocation:{lat:Number(lat),lng:Number(lng)}};
+    const orderBase={
+        orderId,items,customer:{...PROFILE},amount,
+        deliveryLocation:{lat:Number(lat),lng:Number(lng)},
+        deliveryPayout: basePayout,
+        deliveryTimer: 30 // Initial default timer
+    };
     if(payMethod==="online"){writeLocal("sf_pending",{...orderBase,status:"Online Payment - Pending",paymentMethod:"online"});routeTo("#/pay/online")}
     else{writeLocal("sf_pending",{...orderBase,status:"COD - Pending",paymentMethod:"cod"});routeTo("#/cod/review")}
   });
@@ -839,17 +853,68 @@ function finalizeCOD(){
 function CODSuccessView(){
   setTopbar("Order Confirmed",true);setActiveTab("");
   const last=readLocal("sf_last_order",null);
-  $("#view").innerHTML=`<section class="success-wrap"><div class="check-anim"><i class="fa-solid fa-check" style="font-size:36px"></i></div><div class="confetti" id="confetti"></div><h2 style="font-family:Poppins;margin:12px 0 8px;color:var(--accentDark)">Order Confirmed!</h2><div class="muted" style="text-align:center">Order <b>#${escapeHtml(last?.orderId||"")}</b></div><div style="margin-top:16px;display:flex;gap:10px;flex-direction:column;width:100%;max-width:480px"><a class="btn btn-block" href="#/confirm">View Summary</a><a class="btn btn-outline btn-block" href="#/shop">Back to Shop</a></div></section>`;
+  $("#view").innerHTML=`<section class="success-wrap"><div class="check-anim"><i class="fa-solid fa-check" style="font-size:36px"></i></div><div class="confetti" id="confetti"></div><h2 style="font-family:Poppins;margin:12px 0 8px;color:var(--accentDark)">Order Confirmed!</h2><div class="muted" style="text-align:center">Order <b>#${escapeHtml(last?.orderId||"")}</b></div><div style="margin-top:16px;display:flex;gap:10px;flex-direction:column;width:100%;max-width:480px"><a class="btn btn-block" href="#/confirm">Track My Order</a><a class="btn btn-outline btn-block" href="#/shop">Back to Shop</a></div></section>`;
   popConfetti();playSuccessSound();
 }
+
 function ConfirmView(){
-  setTopbar("Order Confirmation",true);setActiveTab("");
-  const last=readLocal("sf_last_order",null);const items=last?.items||[];
+  setTopbar("Live Order Tracking",true);setActiveTab("");
+  
+  // Refresh live order data from DB if available
+  const lastLocal = readLocal("sf_last_order",null);
+  let orderData = lastLocal;
+  
+  // If the order exists in our synced ORDERS array, use the live data so timer updates dynamically
+  if (lastLocal && lastLocal.orderId) {
+      const liveData = ORDERS.find(o => o.orderId === lastLocal.orderId);
+      if (liveData) orderData = liveData;
+  }
+
+  const items=orderData?.items||[];
   const grand=items.reduce((a,it)=>a+((it.price||0)*it.qty+(typeof it.shipping === 'number' ? it.shipping : 50)),0);
-  $("#view").innerHTML=`<section style="padding:14px"><div class="card pad" style="text-align:center"><div class="check-anim"><i class="fa-solid fa-check" style="font-size:36px"></i></div><h2 style="margin:6px 0;font-family:Poppins;color:var(--accentDark)">Thank you!</h2><div class="muted">Order <b>#${escapeHtml(last?.orderId||"")}</b></div></div>
+  
+  const isDelivered = orderData.deliveryStatus === 'Delivered' || orderData.status === 'Delivered';
+  const isCancelled = orderData.status && orderData.status.includes('Cancelled');
+  let timerHtml = '';
+  
+  // Order Timer Logic - specifically placed in Confirmation/Tracking Page
+  if (!isDelivered && !isCancelled && orderData) {
+      timerHtml = `<div class="card pad" style="margin-bottom:12px; text-align:center; background:#FFF8E1; border-color:#FFE082;">
+          <h4 style="margin:0; color:#F57C00; font-family:Poppins;"><i class="fa-solid fa-stopwatch"></i> Estimated Delivery</h4>
+          <div id="order-timer" style="font-size:32px; font-weight:bold; color:#E65100; margin-top:8px;">--:--</div>
+          <div style="font-size:12px; color:#F57C00; margin-top:4px;">We are preparing your food!</div>
+      </div>`;
+      
+      setTimeout(() => {
+          const timerEl = document.getElementById(`order-timer`);
+          if(!timerEl) return;
+          const currentTimer = orderData.deliveryTimer || 30; // Default 30 or Admin edited
+          const targetTime = orderData.createdAt + currentTimer * 60 * 1000;
+          
+          const updateTimer = () => {
+              if(!document.getElementById(`order-timer`)) return clearInterval(intv);
+              const now = Date.now();
+              const diff = targetTime - now;
+              if(diff <= 0) {
+                  timerEl.textContent = "Almost there!";
+                  clearInterval(intv);
+              } else {
+                  const m = Math.floor(diff / 60000);
+                  const s = Math.floor((diff % 60000) / 1000);
+                  timerEl.textContent = `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')} Min`;
+              }
+          };
+          updateTimer();
+          const intv = setInterval(updateTimer, 1000);
+      }, 100);
+  }
+
+  $("#view").innerHTML=`<section style="padding:14px">
+    ${timerHtml}
+    <div class="card pad" style="text-align:center"><div class="check-anim"><i class="fa-solid fa-check" style="font-size:36px"></i></div><h2 style="margin:6px 0;font-family:Poppins;color:var(--accentDark)">Thank you!</h2><div class="muted">Order <b>#${escapeHtml(orderData?.orderId||"")}</b></div><div class="chip" style="margin-top:8px;background:var(--accentLight);color:var(--accentDark)">${escapeHtml(orderData?.status||'Placed')}</div></div>
     <div class="card pad" style="margin-top:12px"><h3 style="margin:0 0 10px;font-family:Poppins;color:var(--accentDark)">Order Summary</h3>${items.map(it=>{const img=PRODUCTS.find(x=>x.id===it.productId)?.imageUrls?.[0]||"";return`<div style="display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)"><img src="${img}" style="width:48px;height:48px;object-fit:cover;border-radius:10px"><div style="flex:1"><div style="font-weight:700">${escapeHtml(it.name)}</div><div class="muted" style="font-size:13px">Qty ${it.qty}</div></div><div style="font-weight:700;color:var(--accentDark)">${money((it.price||0)*it.qty+(typeof it.shipping === 'number' ? it.shipping : 50))}</div></div>`}).join("")}
       <div class="row" style="margin-top:10px"><div style="font-weight:700">Total</div><div style="font-weight:700;color:var(--accentDark)">${money(grand)}</div></div></div>
-    <div style="margin:16px 0;display:flex;flex-direction:column;gap:10px"><a class="btn btn-block" href="#/account/orders">Track Order</a><a class="btn btn-outline btn-block" href="#/shop">Back to Shop</a></div></section>`;
+    <div style="margin:16px 0;display:flex;flex-direction:column;gap:10px"><a class="btn btn-outline btn-block" href="#/shop">Back to Shop</a></div></section>`;
 }
 
 function DeliveryDashboardView(){
@@ -863,7 +928,7 @@ function DeliveryDashboardView(){
   const pickedCount=myOrders.filter(o=>o.deliveryStatus==='Picked Up').length;
   const deliveredCount=myOrders.filter(o=>o.deliveryStatus==='Delivered').length;
   
-  // Digital Wallet Calculation with Time Filters
+  // Digital Wallet Calculation with Time Filters based on o.deliveryPayout
   const now = new Date();
   const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
   const startOfWeek = startOfDay - (now.getDay() * 86400000);
@@ -886,10 +951,10 @@ function DeliveryDashboardView(){
       <!-- Digital Wallet Filters -->
       <h3 style="margin:16px 0 8px;font-family:Poppins;color:var(--accentDark)"><i class="fa-solid fa-wallet"></i> My Earnings</h3>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-        <div class="earning-box"><div class="amt">${money(todayEarning)}</div><div class="lbl">Today</div></div>
-        <div class="earning-box"><div class="amt">${money(weekEarning)}</div><div class="lbl">This Week</div></div>
-        <div class="earning-box"><div class="amt">${money(monthEarning)}</div><div class="lbl">This Month</div></div>
-        <div class="earning-box" style="background:#E6F7EE; border-color:var(--success);"><div class="amt" style="color:var(--success)">${money(totalEarning)}</div><div class="lbl">Total Wallet</div></div>
+        <div class="card pad" style="padding:12px;text-align:center;"><div style="font-size:22px;font-weight:bold;color:var(--accentDark)">${money(todayEarning)}</div><div class="muted" style="font-size:11px;text-transform:uppercase">Today</div></div>
+        <div class="card pad" style="padding:12px;text-align:center;"><div style="font-size:22px;font-weight:bold;color:var(--accentDark)">${money(weekEarning)}</div><div class="muted" style="font-size:11px;text-transform:uppercase">This Week</div></div>
+        <div class="card pad" style="padding:12px;text-align:center;"><div style="font-size:22px;font-weight:bold;color:var(--accentDark)">${money(monthEarning)}</div><div class="muted" style="font-size:11px;text-transform:uppercase">This Month</div></div>
+        <div class="card pad" style="padding:12px;text-align:center;background:var(--accentLight);border-color:var(--success);"><div style="font-size:22px;font-weight:bold;color:var(--success)">${money(totalEarning)}</div><div class="muted" style="font-size:11px;text-transform:uppercase">Total Wallet</div></div>
       </div>
 
       <h3 style="margin:16px 0 8px;font-family:Poppins;color:var(--accentDark)"><i class="fa-solid fa-clipboard-check"></i> Delivery Stats</h3>
@@ -918,7 +983,7 @@ function DeliveryAvailableView(){
           <div style="font-weight:600">${escapeHtml(o.customer?.name||'Customer')}</div>
           <div class="muted" style="font-size:13px"><i class="fa-solid fa-location-dot"></i> ${escapeHtml(o.customer?.address||'—')}, ${escapeHtml(o.customer?.city||'')} ${escapeHtml(o.customer?.pincode||'')}</div>
           <div class="del-items">${o.items?.map(i=>i.name+' x'+i.qty).join(', ')||''}</div>
-          <div class="row"><div style="font-weight:700;font-size:16px;color:var(--accentDark)">${money(o.amount)}</div><button class="btn btn-sm btn-success accept-order-btn" data-key="${o.firebaseKey}"><i class="fa-solid fa-check"></i> Accept</button></div>
+          <div class="row"><div style="font-weight:700;font-size:16px;color:var(--accentDark)">Payout: ${money(o.deliveryPayout || 20)}</div><button class="btn btn-sm btn-success accept-order-btn" data-key="${o.firebaseKey}"><i class="fa-solid fa-check"></i> Accept</button></div>
         </div>`).join('')}
     </section>`;
   $$(".accept-order-btn").forEach(btn=>btn.addEventListener("click",()=>{
@@ -943,7 +1008,7 @@ function DeliveryMyOrdersView(){
           <div class="muted" style="font-size:13px"><i class="fa-solid fa-phone"></i> ${escapeHtml(o.customer?.phone||'—')}</div>
           <div class="muted" style="font-size:13px"><i class="fa-solid fa-location-dot"></i> ${escapeHtml(o.customer?.address||'—')}, ${escapeHtml(o.customer?.city||'')} ${escapeHtml(o.customer?.pincode||'')}</div>
           <div class="del-items">${o.items?.map(i=>i.name+' x'+i.qty).join(', ')||''}</div>
-          <div style="font-weight:700;margin:6px 0;color:var(--accentDark)">${money(o.amount)} <span class="muted" style="font-weight:400;font-size:12px">(${o.paymentMethod==='online'?'UPI':'COD'})</span></div>
+          <div style="font-weight:700;margin:6px 0;color:var(--accentDark)">Payout: ${money(o.deliveryPayout || 20)} <span class="muted" style="font-weight:400;font-size:12px">(${o.paymentMethod==='online'?'UPI':'COD'})</span></div>
           ${o.deliveryStatus!=='Delivered'?`<div style="display:flex;gap:8px;margin-top:8px">
             ${o.deliveryStatus==='Accepted'?`<button class="btn btn-sm" style="background:#7C3AED" data-update="${o.firebaseKey}" data-status="Picked Up"><i class="fa-solid fa-box-open"></i> Picked Up</button>`:''}
             ${o.deliveryStatus==='Picked Up'?`<button class="btn btn-sm btn-success" data-update="${o.firebaseKey}" data-status="Delivered"><i class="fa-solid fa-circle-check"></i> Delivered</button>`:''}
@@ -1072,17 +1137,17 @@ function ProfileEditView(isSetup=false){
   setTopbar("Account",true);setActiveTab("");
   $("#view").innerHTML=`<section style="padding:14px"><div class="profile-head"><div class="avatar"><img id="avatar-img" src="${PROFILE.avatar||'https://i.pravatar.cc/200?u=sf'}" alt="avatar"></div><label class="chip" style="cursor:pointer"><i class="fa-solid fa-camera" style="color:var(--accent)"></i> Change Photo<input type="file" id="avatar-file" accept="image/*" style="display:none"></label></div>
     <div class="card pad"><h3 style="margin:0 0 12px;font-family:Poppins;color:var(--accentDark)">Profile Information</h3>
-      <label>Name</label><input id="pf-name" value="${escapeHtml(PROFILE.name||'')}">
-      <label>Email</label><input id="pf-email" type="email" value="${escapeHtml(PROFILE.email||'')}">
-      <label>Phone</label><input id="pf-phone" type="tel" value="${escapeHtml(PROFILE.phone||'')}">
-      <div class="row" style="gap:10px;margin-top:10px"><div style="flex:1"><label>Pincode</label><input id="pf-pincode" value="${escapeHtml(PROFILE.pincode||'')}"></div><div style="flex:1"><label>City</label><input id="pf-city" value="${escapeHtml(PROFILE.city||USER_CITY||'')}"></div></div>
-      <div class="row" style="gap:10px;margin-top:10px"><div style="flex:1"><label>State</label><input id="pf-state" value="${escapeHtml(PROFILE.state||'')}"></div><div style="flex:1"><label>District</label><input id="pf-district" value="${escapeHtml(PROFILE.district||'')}"></div></div>
-      <label style="margin-top:10px">Landmark</label><input id="pf-landmark" value="${escapeHtml(PROFILE.landmark||'')}">
-      <label style="margin-top:10px">Address</label><input id="pf-address" value="${escapeHtml(PROFILE.address||'')}">
-      <div style="margin-top:14px"><button class="btn btn-block" id="pf-save">${isSetup?'Save & Continue':'Save Changes'}</button></div>
+      <label>Name</label><input id="pfv-name" value="${escapeHtml(PROFILE.name||'')}">
+      <label>Email</label><input id="pfv-email" type="email" value="${escapeHtml(PROFILE.email||'')}">
+      <label>Phone</label><input id="pfv-phone" type="tel" value="${escapeHtml(PROFILE.phone||'')}">
+      <div class="row" style="gap:10px;margin-top:10px"><div style="flex:1"><label>Pincode</label><input id="pfv-pincode" value="${escapeHtml(PROFILE.pincode||'')}"></div><div style="flex:1"><label>City</label><input id="pfv-city" value="${escapeHtml(PROFILE.city||USER_CITY||'')}"></div></div>
+      <div class="row" style="gap:10px;margin-top:10px"><div style="flex:1"><label>State</label><input id="pfv-state" value="${escapeHtml(PROFILE.state||'')}"></div><div style="flex:1"><label>District</label><input id="pfv-district" value="${escapeHtml(PROFILE.district||'')}"></div></div>
+      <label style="margin-top:10px">Landmark</label><input id="pfv-landmark" value="${escapeHtml(PROFILE.landmark||'')}">
+      <label style="margin-top:10px">Address</label><input id="pfv-address" value="${escapeHtml(PROFILE.address||'')}">
+      <div style="margin-top:14px"><button class="btn btn-block" id="pfv-save">${isSetup?'Save & Continue':'Save Changes'}</button></div>
     </div></section>`;
   $("#avatar-file").addEventListener("change",async e=>{const f=e.target.files?.[0];if(!f)return;const url=await compressToDataURL(f,400,400,.9);PROFILE.avatar=url;saveProfile();$("#avatar-img").src=url});
-  $("#pf-save").addEventListener("click",()=>{PROFILE.name=$("#pf-name").value.trim();PROFILE.email=$("#pf-email").value.trim();PROFILE.phone=$("#pf-phone").value.trim();PROFILE.pincode=$("#pf-pincode").value.trim();PROFILE.city=$("#pf-city").value.trim();PROFILE.state=$("#pf-state").value.trim();PROFILE.district=$("#pf-district").value.trim();PROFILE.landmark=$("#pf-landmark").value.trim();PROFILE.address=$("#pf-address").value.trim();PROFILE.isComplete=hasCompleteProfile();saveProfile();const next=readLocal("sf_next",null);localStorage.removeItem("sf_next");toast("Profile saved");if(isSetup&&next)routeTo(next);else{updateTabbar();routeTo("#/account")}});
+  $("#pfv-save").addEventListener("click",()=>{PROFILE.name=$("#pfv-name").value.trim();PROFILE.email=$("#pfv-email").value.trim();PROFILE.phone=$("#pfv-phone").value.trim();PROFILE.pincode=$("#pfv-pincode").value.trim();PROFILE.city=$("#pfv-city").value.trim();PROFILE.state=$("#pfv-state").value.trim();PROFILE.district=$("#pfv-district").value.trim();PROFILE.landmark=$("#pfv-landmark").value.trim();PROFILE.address=$("#pfv-address").value.trim();PROFILE.isComplete=hasCompleteProfile();saveProfile();const next=readLocal("sf_next",null);localStorage.removeItem("sf_next");toast("Profile saved");if(isSetup&&next)routeTo(next);else{updateTabbar();routeTo("#/account")}});
 }
 function FavoritesView(){
   setTopbar("My Favorites",true);setActiveTab("");
@@ -1101,43 +1166,12 @@ function OrderDetailView(orderId){
   const o=ORDERS.find(x=>x.orderId===orderId);if(!o){OrdersListView();return}
   setTopbar("Order Detail",true);setActiveTab("");
   
-  const isDelivered = o.deliveryStatus === 'Delivered' || o.status === 'Delivered';
-  const isCancelled = o.status.includes('Cancelled');
-  let timerHtml = '';
-  
-  if (!isDelivered && !isCancelled) {
-      timerHtml = `<div class="card pad" style="margin-bottom:12px; text-align:center; background:#FFF8E1; border-color:#FFE082;">
-          <h4 style="margin:0; color:#F57C00; font-family:Poppins;"><i class="fa-solid fa-stopwatch"></i> Estimated Delivery</h4>
-          <div id="order-timer-${orderId}" style="font-size:32px; font-weight:bold; color:#E65100; margin-top:8px;">--:--</div>
-          <div style="font-size:12px; color:#F57C00; margin-top:4px;">We are preparing your food!</div>
-      </div>`;
-      
-      setTimeout(() => {
-          const timerEl = document.getElementById(`order-timer-${orderId}`);
-          if(!timerEl) return;
-          const targetTime = o.createdAt + 30 * 60 * 1000; // 30 mins
-          const updateTimer = () => {
-              if(!document.getElementById(`order-timer-${orderId}`)) return clearInterval(intv);
-              const now = Date.now();
-              const diff = targetTime - now;
-              if(diff <= 0) {
-                  timerEl.textContent = "Almost there!";
-                  clearInterval(intv);
-              } else {
-                  const m = Math.floor(diff / 60000);
-                  const s = Math.floor((diff % 60000) / 1000);
-                  timerEl.textContent = `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')} Min`;
-              }
-          };
-          updateTimer(); // Initial call
-          const intv = setInterval(updateTimer, 1000);
-      }, 100);
-  }
+  const sub=o.items.reduce((a,it)=>a+((it.price||0)*it.qty),0);
+  const shipT=o.items.reduce((a,it)=>a+(typeof it.shipping === 'number' ? it.shipping : 50),0);
 
   const delHtml=o.deliveryBoy?`<div class="card pad" style="margin-top:12px"><h4 style="margin:0 0 8px;font-family:Poppins;color:var(--accentDark)"><i class="fa-solid fa-motorcycle"></i> Delivery Partner</h4><div>${escapeHtml(o.deliveryBoy.name||'—')}</div><div class="muted">${escapeHtml(o.deliveryBoy.phone||'')}</div><div class="chip" style="margin-top:6px;background:var(--accentLight);color:var(--accentDark)">${escapeHtml(o.deliveryStatus||'Assigned')}</div></div>`:'';
   
   $("#view").innerHTML=`<section style="padding:14px">
-    ${timerHtml}
     <div class="card pad">
     <div class="row"><div><strong style="color:var(--accentDark)">Order</strong> #${escapeHtml(o.orderId)}</div><div class="muted">${new Date(o.createdAt).toLocaleString()}</div></div><div class="sep"></div>
     ${o.items.map(it=>`<div class="row"><div>${escapeHtml(it.name)} <span class="muted">x${it.qty}</span></div><div style="color:var(--accentDark)">${money((it.price||0)*it.qty+(typeof it.shipping === 'number' ? it.shipping : 50))}</div></div>`).join("")}
@@ -1190,6 +1224,7 @@ function render(){
   else ShopView();
 }
 
+// Initializing the app - Loader starts immediately to prevent blank screen
 (function init(){ showLoader(); checkCitySelection(); checkAndRender(); })();
 </script>
 </body>
